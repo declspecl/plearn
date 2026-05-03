@@ -74,15 +74,6 @@
     padding-right: max(env(safe-area-inset-right), 0px);
 }
 
-/* Suppress all transitions during theme changes */
-.no-transitions,
-.no-transitions *,
-.no-transitions *::before,
-.no-transitions *::after {
-    transition-duration: 0s !important;
-    animation-duration: 0s !important;
-}
-
 :root {
     color-scheme: light;
     --radius: 0.625rem;
