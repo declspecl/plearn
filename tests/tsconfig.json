@@ -1,0 +1,19 @@
+{
+    "extends": "../tools/typescript/server.tsconfig.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "composite": false,
+        "baseUrl": "..",
+        "paths": {
+            "@plearn/auth/*": ["packages/auth/src/*"],
+            "@plearn/composition/*": ["packages/composition/src/*"],
+            "@plearn/core/*": ["packages/core/src/*"],
+            "@plearn/db/*": ["packages/db/src/*"],
+            "@plearn/dependency/*": ["packages/dependency/src/*"],
+            "@plearn/trpc/*": ["packages/trpc/src/*"],
+            "@plearn/utils/*": ["packages/utils/src/*"]
+        }
+    },
+    "include": ["local/**/*.ts", "integration/**/*.ts", "clearbox/**/*.ts"],
+    "exclude": ["node_modules", "dist"]
+}

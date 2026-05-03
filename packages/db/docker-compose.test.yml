@@ -1,0 +1,17 @@
+name: plearn-test
+
+services:
+    plearn-test-db:
+        image: postgres
+        restart: always
+        ports:
+            - "5434:5432"
+        environment:
+            POSTGRES_DB: plearn_test
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - plearn_test_pgdata:/var/lib/postgresql
+
+volumes:
+    plearn_test_pgdata:

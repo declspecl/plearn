@@ -1,0 +1,61 @@
+{
+    "name": "@plearn/core",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm exec tsc",
+        "dev": "pnpm exec tsc --watch",
+        "lint": "pnpm exec eslint --cache --cache-location .cache/eslint . --fix",
+        "prettier": "pnpm exec prettier --cache --cache-location .cache/prettier --ignore-path ../../.prettierignore . --write",
+        "clean": "rm -rf dist .turbo .cache",
+        "fullclean": "pnpm run clean && rm -rf node_modules",
+        "check-types": "pnpm exec tsc --noEmit"
+    },
+    "prettier": "@plearn/prettier",
+    "dependencies": {
+        "@plearn/utils": "workspace:*"
+    },
+    "devDependencies": {
+        "@plearn/eslint": "workspace:*",
+        "@plearn/prettier": "workspace:*",
+        "@plearn/typescript": "workspace:*"
+    },
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./dist/index.js"
+        },
+        "./task": {
+            "types": "./src/task/index.ts",
+            "default": "./dist/task/index.js"
+        },
+        "./task/model": {
+            "types": "./src/task/model/index.ts",
+            "default": "./dist/task/model/index.js"
+        },
+        "./task/repository": {
+            "types": "./src/task/repository.ts",
+            "default": "./dist/task/repository.js"
+        },
+        "./task/service": {
+            "types": "./src/task/service.ts",
+            "default": "./dist/task/service.js"
+        },
+        "./shared": {
+            "types": "./src/shared/index.ts",
+            "default": "./dist/shared/index.js"
+        },
+        "./shared/clock": {
+            "types": "./src/shared/clock.ts",
+            "default": "./dist/shared/clock.js"
+        },
+        "./shared/logger": {
+            "types": "./src/shared/logger.ts",
+            "default": "./dist/shared/logger.js"
+        },
+        "./shared/model/id": {
+            "types": "./src/shared/model/id.ts",
+            "default": "./dist/shared/model/id.js"
+        }
+    }
+}

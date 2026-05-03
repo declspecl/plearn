@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "target": "es2022",
+        "lib": ["es2023"],
+        "composite": true,
+        "skipLibCheck": true,
+        "allowJs": true,
+        "checkJs": true,
+        "module": "es2022",
+        "moduleResolution": "bundler",
+        "moduleDetection": "force",
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "noEmit": false,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "emitDeclarationOnly": false,
+
+        "incremental": true,
+        "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
+
+        "strict": true,
+        "verbatimModuleSyntax": true,
+        "noUncheckedIndexedAccess": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
+    }
+}

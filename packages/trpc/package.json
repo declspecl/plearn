@@ -1,0 +1,72 @@
+{
+    "name": "@plearn/trpc",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm exec tsc",
+        "dev": "pnpm exec tsc --watch",
+        "lint": "pnpm exec eslint --cache --cache-location .cache/eslint . --fix",
+        "prettier": "pnpm exec prettier --cache --cache-location .cache/prettier --ignore-path ../../.prettierignore . --write",
+        "clean": "rm -rf dist .turbo .cache",
+        "fullclean": "pnpm run clean && rm -rf node_modules",
+        "check-types": "pnpm exec tsc --noEmit"
+    },
+    "prettier": "@plearn/prettier",
+    "peerDependencies": {
+        "next": "^15.1.6",
+        "react": "^19.0.0"
+    },
+    "peerDependenciesMeta": {
+        "next": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@plearn/auth": "workspace:*",
+        "@plearn/db": "workspace:*",
+        "@plearn/eslint": "workspace:*",
+        "@plearn/prettier": "workspace:*",
+        "@plearn/typescript": "workspace:*",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "next": "catalog:",
+        "react": "catalog:"
+    },
+    "exports": {
+        "./client/react": {
+            "types": "./src/client/react.tsx",
+            "default": "./dist/client/react.js"
+        },
+        "./server": {
+            "types": "./src/server/index.ts",
+            "default": "./dist/server/index.js"
+        },
+        "./server/root": {
+            "types": "./src/server/trpc/root.ts",
+            "default": "./dist/server/trpc/root.js"
+        },
+        "./server/trpc": {
+            "types": "./src/server/trpc/trpc.ts",
+            "default": "./dist/server/trpc/trpc.js"
+        },
+        "./server/error-mapper": {
+            "types": "./src/server/trpc/error-mapper.ts",
+            "default": "./dist/server/trpc/error-mapper.js"
+        },
+        "./query-client": {
+            "types": "./src/query-client.ts",
+            "default": "./dist/query-client.js"
+        }
+    },
+    "dependencies": {
+        "@plearn/core": "workspace:*",
+        "@tanstack/react-query": "catalog:",
+        "@trpc/client": "catalog:",
+        "@trpc/react-query": "catalog:",
+        "@trpc/server": "catalog:",
+        "client-only": "catalog:",
+        "server-only": "catalog:",
+        "superjson": "catalog:",
+        "zod": "catalog:"
+    }
+}

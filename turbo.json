@@ -1,0 +1,48 @@
+{
+    "$schema": "https://turborepo.dev/schema.json",
+    "ui": "tui",
+    "globalEnv": [
+        "DATABASE_URL",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "BETTER_AUTH_SERVER_URL",
+        "BETTER_AUTH_API_PATH",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "NEXT_PUBLIC_API_URL",
+        "INTERNAL_PAGES_ENABLED",
+        "NODE_ENV",
+        "VERCEL_URL",
+        "PORT",
+        "BASE_URL",
+        "VITE_BASE_URL"
+    ],
+    "tasks": {
+        "build": {
+            "dependsOn": ["^build"],
+            "inputs": ["$TURBO_DEFAULT$", ".env*"],
+            "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+        },
+        "lint": {
+            "dependsOn": ["^lint"]
+        },
+        "prettier": {
+            "dependsOn": ["^prettier"]
+        },
+        "check-types": {
+            "dependsOn": ["^check-types"]
+        },
+        "clean": {
+            "dependsOn": ["^clean"],
+            "cache": false
+        },
+        "fullclean": {
+            "dependsOn": ["^fullclean"],
+            "cache": false
+        },
+        "dev": {
+            "cache": false,
+            "persistent": true
+        }
+    }
+}

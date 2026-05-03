@@ -1,0 +1,52 @@
+{
+    "name": "@plearn/db",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm exec tsc",
+        "dev": "pnpm run db:start:dev && pnpm run db:studio:dev",
+        "lint": "pnpm exec eslint --cache --cache-location .cache/eslint . --fix",
+        "prettier": "pnpm exec prettier --cache --cache-location .cache/prettier --ignore-path ../../.prettierignore . --write",
+        "clean": "rm -rf dist .turbo .cache",
+        "fullclean": "pnpm run clean && rm -rf node_modules",
+        "db:start:dev": "docker compose up --build -d",
+        "db:clean:dev": "dotenv -e .env.development -- docker compose down --volumes --rmi all",
+        "db:generate:dev": "dotenv -e .env.development -- pnpm exec drizzle-kit generate",
+        "db:migrate:dev": "dotenv -e .env.development -- pnpm exec drizzle-kit migrate",
+        "db:studio:dev": "dotenv -e .env.development -- pnpm exec drizzle-kit studio",
+        "db:push:dev": "dotenv -e .env.development -- pnpm exec drizzle-kit push",
+        "db:test:up": "docker compose -f docker-compose.test.yml up -d",
+        "db:test:down": "docker compose -f docker-compose.test.yml down -v",
+        "db:test:migrate": "dotenv -e .env.test -- pnpm exec drizzle-kit migrate",
+        "db:test:push": "dotenv -e .env.test -- pnpm exec drizzle-kit push",
+        "db:generate:prod": "dotenv -e .env.production -- pnpm exec drizzle-kit generate",
+        "db:migrate:prod": "dotenv -e .env.production -- pnpm exec drizzle-kit migrate",
+        "db:studio:prod": "dotenv -e .env.production -- pnpm exec drizzle-kit studio",
+        "check-types": "pnpm exec tsc --noEmit"
+    },
+    "prettier": "@plearn/prettier",
+    "exports": {
+        "./client": {
+            "types": "./src/client.ts",
+            "default": "./dist/client.js"
+        },
+        "./schema": {
+            "types": "./src/schema/index.ts",
+            "default": "./dist/schema/index.js"
+        }
+    },
+    "dependencies": {
+        "@neondatabase/serverless": "catalog:",
+        "drizzle-orm": "catalog:"
+    },
+    "devDependencies": {
+        "@plearn/eslint": "workspace:*",
+        "@plearn/prettier": "workspace:*",
+        "@plearn/typescript": "workspace:*",
+        "@types/node": "catalog:",
+        "@types/pg": "catalog:",
+        "dotenv-cli": "catalog:",
+        "drizzle-kit": "catalog:",
+        "pg": "catalog:"
+    }
+}

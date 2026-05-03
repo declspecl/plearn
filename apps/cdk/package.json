@@ -1,0 +1,33 @@
+{
+    "name": "@plearn/cdk",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm exec tsc",
+        "dev": "pnpm exec cdk watch",
+        "lint": "pnpm exec eslint --cache --cache-location .cache/eslint . --fix",
+        "prettier": "pnpm exec prettier --cache --cache-location .cache/prettier --ignore-path ../../.prettierignore . --write",
+        "clean": "rm -rf dist .turbo .cache cdk.out",
+        "fullclean": "pnpm run clean && rm -rf node_modules",
+        "synth": "dotenv -e .env.local -- pnpm exec cdk synth",
+        "deploy": "dotenv -e .env.local -- pnpm exec cdk deploy --all",
+        "diff": "dotenv -e .env.local -- pnpm exec cdk diff",
+        "bootstrap": "dotenv -e .env.local -- pnpm exec cdk bootstrap",
+        "check-types": "pnpm exec tsc --noEmit"
+    },
+    "prettier": "@plearn/prettier",
+    "dependencies": {
+        "aws-cdk-lib": "catalog:",
+        "constructs": "catalog:",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@plearn/eslint": "workspace:*",
+        "@plearn/prettier": "workspace:*",
+        "@plearn/typescript": "workspace:*",
+        "@types/node": "catalog:",
+        "aws-cdk": "catalog:",
+        "dotenv-cli": "catalog:",
+        "typescript": "catalog:"
+    }
+}

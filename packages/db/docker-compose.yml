@@ -1,0 +1,17 @@
+name: plearn-dev
+
+services:
+    plearn-db:
+        image: postgres
+        restart: always
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: plearn_dev
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+        volumes:
+            - plearn_dev_pgdata:/var/lib/postgresql
+
+volumes:
+    plearn_dev_pgdata:

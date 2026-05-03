@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+.next
+.turbo
+.cache
+
+# Generated files
+*.tsbuildinfo
+tailwind.config.js
+
+# Logs
+*.log
+
+# Environment
+.env*
+
+# OS
+.DS_Store
