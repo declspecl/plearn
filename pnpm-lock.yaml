@@ -6,6 +6,12 @@ settings:
 
 catalogs:
     default:
+        "@ai-sdk/deepseek":
+            specifier: ^1.0.9
+            version: 1.0.39
+        "@ai-sdk/openai":
+            specifier: ^2.0.9
+            version: 2.0.106
         "@base-ui/react":
             specifier: ^1.4.1
             version: 1.4.1
@@ -54,6 +60,9 @@ catalogs:
         "@vitest/coverage-v8":
             specifier: ^4.1.4
             version: 4.1.4
+        ai:
+            specifier: ^5.0.100
+            version: 5.0.183
         aws-cdk:
             specifier: ^2.1119.0
             version: 2.1119.0
@@ -91,8 +100,8 @@ catalogs:
             specifier: ^0.31.8
             version: 0.31.8
         drizzle-orm:
-            specifier: ^0.38.4
-            version: 0.38.4
+            specifier: ^0.45.2
+            version: 0.45.2
         eslint:
             specifier: ^9.39.1
             version: 9.39.1
@@ -168,6 +177,9 @@ catalogs:
         tailwindcss:
             specifier: ^4.2.4
             version: 4.2.4
+        tsx:
+            specifier: ^4.20.6
+            version: 4.21.0
         turbo:
             specifier: ^2.9.6
             version: 2.9.6
@@ -266,6 +278,12 @@ importers:
 
     apps/website:
         dependencies:
+            "@ai-sdk/deepseek":
+                specifier: "catalog:"
+                version: 1.0.39(zod@4.3.6)
+            "@ai-sdk/openai":
+                specifier: "catalog:"
+                version: 2.0.106(zod@4.3.6)
             "@base-ui/react":
                 specifier: "catalog:"
                 version: 1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -293,6 +311,9 @@ importers:
             "@tanstack/react-form":
                 specifier: "catalog:"
                 version: 1.29.1(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+            ai:
+                specifier: "catalog:"
+                version: 5.0.183(zod@4.3.6)
             class-variance-authority:
                 specifier: "catalog:"
                 version: 0.7.1
@@ -395,7 +416,7 @@ importers:
         dependencies:
             better-auth:
                 specifier: "catalog:"
-                version: 1.6.5(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.8)(next@16.2.4(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(pg@8.17.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.4)
+                version: 1.6.5(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2))(next@16.2.4(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(pg@8.17.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.4)
             url-join:
                 specifier: "catalog:"
                 version: 5.0.0
@@ -464,7 +485,7 @@ importers:
                 version: 1.0.2
             drizzle-orm:
                 specifier: "catalog:"
-                version: 0.38.4(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(@types/react@19.2.14)(kysely@0.28.16)(pg@8.17.2)(react@19.2.5)
+                version: 0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2)
         devDependencies:
             "@plearn/eslint":
                 specifier: workspace:*
@@ -515,6 +536,31 @@ importers:
             "@types/node":
                 specifier: "catalog:"
                 version: 22.19.7
+
+    packages/scripts:
+        dependencies:
+            drizzle-orm:
+                specifier: "catalog:"
+                version: 0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2)
+        devDependencies:
+            "@plearn/eslint":
+                specifier: workspace:*
+                version: link:../../tools/eslint
+            "@plearn/prettier":
+                specifier: workspace:*
+                version: link:../../tools/prettier
+            "@plearn/typescript":
+                specifier: workspace:*
+                version: link:../../tools/typescript
+            "@types/node":
+                specifier: "catalog:"
+                version: 25.6.0
+            dotenv-cli:
+                specifier: "catalog:"
+                version: 11.0.0
+            tsx:
+                specifier: "catalog:"
+                version: 4.21.0
 
     packages/trpc:
         dependencies:
@@ -638,6 +684,34 @@ importers:
                 version: link:../prettier
 
 packages:
+    "@ai-sdk/deepseek@1.0.39":
+        resolution: { integrity: sha512-5TXw7Pm0+/YL2WdnZpXBgruPayhqBgBMNDL95V14Sf4MQz+RmNMhansvK8Fv9Dcgp3Y0p7EasNsPWYJOfj0zoA== }
+        engines: { node: ">=18" }
+        peerDependencies:
+            zod: ^3.25.76 || ^4.1.8
+
+    "@ai-sdk/gateway@2.0.86":
+        resolution: { integrity: sha512-pP9F5G7C5sqZtAwquFB+g50lVS/s4Wf/ll2WSm0ODk0Iix27trVgBDpFK5CBletcQXSDlAvSQQi25nBodYLt3g== }
+        engines: { node: ">=18" }
+        peerDependencies:
+            zod: ^3.25.76 || ^4.1.8
+
+    "@ai-sdk/openai@2.0.106":
+        resolution: { integrity: sha512-EFC0rpo1wfe4HIz5KZCE72edP2J7fOeR7wPXzjCDljaTRB1wectKDIKRLowpU4F0mbcJ+XScAsoYNPK/Z20aVQ== }
+        engines: { node: ">=18" }
+        peerDependencies:
+            zod: ^3.25.76 || ^4.1.8
+
+    "@ai-sdk/provider-utils@3.0.25":
+        resolution: { integrity: sha512-CvsRu+32Y8a167s+lrIBtsybvgTHp8j9y+6BeTvLeoW3Q+okw/b4CnNUFOLIXsRaKHQKAH+IHNJPYWywfpw0LA== }
+        engines: { node: ">=18" }
+        peerDependencies:
+            zod: ^3.25.76 || ^4.1.8
+
+    "@ai-sdk/provider@2.0.3":
+        resolution: { integrity: sha512-h88OPkavHTiN9tMn2l5awAznGB0lXzjcLhgR1/rvjB2zlLprsNxbM2tt6OJsHUxduLC3klq0/eqaSf6fX5XVww== }
+        engines: { node: ">=18" }
+
     "@alloc/quick-lru@5.2.0":
         resolution: { integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw== }
         engines: { node: ">=10" }
@@ -1787,6 +1861,10 @@ packages:
     "@open-draft/until@2.1.0":
         resolution: { integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg== }
 
+    "@opentelemetry/api@1.9.0":
+        resolution: { integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg== }
+        engines: { node: ">=8.0.0" }
+
     "@opentelemetry/api@1.9.1":
         resolution: { integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q== }
         engines: { node: ">=8.0.0" }
@@ -2453,6 +2531,10 @@ packages:
         resolution: { integrity: sha512-Xzmnb58+Db78gT/CCj/PVCvK+zxbnsw6F+O1oheYszJbBSdEjVhQi3C/Xttzxgi/GLmpvOggRs1RFpiJ8+c34Q== }
         engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
 
+    "@vercel/oidc@3.1.0":
+        resolution: { integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w== }
+        engines: { node: ">= 20" }
+
     "@vitest/coverage-v8@4.1.4":
         resolution: { integrity: sha512-x7FptB5oDruxNPDNY2+S8tCh0pcq7ymCe1gTHcsp733jYjrJl8V1gMUlVysuCD9Kz46Xz9t1akkv08dPcYDs1w== }
         peerDependencies:
@@ -2513,6 +2595,12 @@ packages:
     agent-base@7.1.4:
         resolution: { integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ== }
         engines: { node: ">= 14" }
+
+    ai@5.0.183:
+        resolution: { integrity: sha512-lmLFkxJ2epeUXi6QXi/9VYs1HF61vikpP8vGnGd3Erdh/syUyfZ/DC1to2AoNwytBNpICN3OGbTpwc7jfPewgg== }
+        engines: { node: ">=18" }
+        peerDependencies:
+            zod: ^3.25.76 || ^4.1.8
 
     ajv-formats@3.0.1:
         resolution: { integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ== }
@@ -3040,8 +3128,8 @@ packages:
         resolution: { integrity: sha512-O9EC/miwdnRDY10qRxM8P3Pg8hXe3LyU4ZipReKOgTwn4OqANmftj8XJz1UPUAS6NMHf0E2htjsbQujUTkncCg== }
         hasBin: true
 
-    drizzle-orm@0.38.4:
-        resolution: { integrity: sha512-s7/5BpLKO+WJRHspvpqTydxFob8i1vo2rEx4pY6TGY7QSMuUfWUuzaY0DIpXCkgHOo37BaFC+SJQb99dDUXT3Q== }
+    drizzle-orm@0.45.2:
+        resolution: { integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q== }
         peerDependencies:
             "@aws-sdk/client-rds-data": ">=3"
             "@cloudflare/workers-types": ">=4"
@@ -3051,25 +3139,25 @@ packages:
             "@neondatabase/serverless": ">=0.10.0"
             "@op-engineering/op-sqlite": ">=2"
             "@opentelemetry/api": ^1.4.1
-            "@planetscale/database": ">=1"
+            "@planetscale/database": ">=1.13"
             "@prisma/client": "*"
             "@tidbcloud/serverless": "*"
             "@types/better-sqlite3": "*"
             "@types/pg": "*"
-            "@types/react": ">=18"
             "@types/sql.js": "*"
+            "@upstash/redis": ">=1.34.7"
             "@vercel/postgres": ">=0.8.0"
             "@xata.io/client": "*"
             better-sqlite3: ">=7"
             bun-types: "*"
             expo-sqlite: ">=14.0.0"
+            gel: ">=2"
             knex: "*"
             kysely: "*"
             mysql2: ">=2"
             pg: ">=8"
             postgres: ">=3"
             prisma: "*"
-            react: ">=18"
             sql.js: ">=1"
             sqlite3: ">=5"
         peerDependenciesMeta:
@@ -3099,9 +3187,9 @@ packages:
                 optional: true
             "@types/pg":
                 optional: true
-            "@types/react":
-                optional: true
             "@types/sql.js":
+                optional: true
+            "@upstash/redis":
                 optional: true
             "@vercel/postgres":
                 optional: true
@@ -3112,6 +3200,8 @@ packages:
             bun-types:
                 optional: true
             expo-sqlite:
+                optional: true
+            gel:
                 optional: true
             knex:
                 optional: true
@@ -3124,8 +3214,6 @@ packages:
             postgres:
                 optional: true
             prisma:
-                optional: true
-            react:
                 optional: true
             sql.js:
                 optional: true
@@ -3898,6 +3986,9 @@ packages:
 
     json-schema-typed@8.0.2:
         resolution: { integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA== }
+
+    json-schema@0.4.0:
+        resolution: { integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA== }
 
     json-stable-stringify-without-jsonify@1.0.1:
         resolution: { integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw== }
@@ -5306,6 +5397,36 @@ packages:
                 optional: true
 
 snapshots:
+    "@ai-sdk/deepseek@1.0.39(zod@4.3.6)":
+        dependencies:
+            "@ai-sdk/provider": 2.0.3
+            "@ai-sdk/provider-utils": 3.0.25(zod@4.3.6)
+            zod: 4.3.6
+
+    "@ai-sdk/gateway@2.0.86(zod@4.3.6)":
+        dependencies:
+            "@ai-sdk/provider": 2.0.3
+            "@ai-sdk/provider-utils": 3.0.25(zod@4.3.6)
+            "@vercel/oidc": 3.1.0
+            zod: 4.3.6
+
+    "@ai-sdk/openai@2.0.106(zod@4.3.6)":
+        dependencies:
+            "@ai-sdk/provider": 2.0.3
+            "@ai-sdk/provider-utils": 3.0.25(zod@4.3.6)
+            zod: 4.3.6
+
+    "@ai-sdk/provider-utils@3.0.25(zod@4.3.6)":
+        dependencies:
+            "@ai-sdk/provider": 2.0.3
+            "@standard-schema/spec": 1.1.0
+            eventsource-parser: 3.0.8
+            zod: 4.3.6
+
+    "@ai-sdk/provider@2.0.3":
+        dependencies:
+            json-schema: 0.4.0
+
     "@alloc/quick-lru@5.2.0": {}
 
     "@aws-cdk/asset-awscli-v1@2.2.273": {}
@@ -5577,10 +5698,12 @@ snapshots:
             nanostores: 1.3.0
             zod: 4.3.6
 
-    "@better-auth/drizzle-adapter@1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)":
+    "@better-auth/drizzle-adapter@1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2))":
         dependencies:
             "@better-auth/core": 1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0)
             "@better-auth/utils": 0.4.0
+        optionalDependencies:
+            drizzle-orm: 0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2)
 
     "@better-auth/kysely-adapter@1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(kysely@0.28.16)":
         dependencies:
@@ -6198,6 +6321,8 @@ snapshots:
 
     "@open-draft/until@2.1.0": {}
 
+    "@opentelemetry/api@1.9.0": {}
+
     "@opentelemetry/api@1.9.1": {}
 
     "@opentelemetry/semantic-conventions@1.40.0": {}
@@ -6748,6 +6873,8 @@ snapshots:
             "@typescript-eslint/types": 8.50.0
             eslint-visitor-keys: 4.2.1
 
+    "@vercel/oidc@3.1.0": {}
+
     "@vitest/coverage-v8@4.1.4(vitest@4.1.4)":
         dependencies:
             "@bcoe/v8-coverage": 1.0.2
@@ -6828,6 +6955,14 @@ snapshots:
         optional: true
 
     agent-base@7.1.4: {}
+
+    ai@5.0.183(zod@4.3.6):
+        dependencies:
+            "@ai-sdk/gateway": 2.0.86(zod@4.3.6)
+            "@ai-sdk/provider": 2.0.3
+            "@ai-sdk/provider-utils": 3.0.25(zod@4.3.6)
+            "@opentelemetry/api": 1.9.0
+            zod: 4.3.6
 
     ajv-formats@3.0.1(ajv@8.20.0):
         optionalDependencies:
@@ -6963,10 +7098,10 @@ snapshots:
 
     baseline-browser-mapping@2.9.11: {}
 
-    better-auth@1.6.5(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.8)(next@16.2.4(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(pg@8.17.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.4):
+    better-auth@1.6.5(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2))(next@16.2.4(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(pg@8.17.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vitest@4.1.4):
         dependencies:
             "@better-auth/core": 1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0)
-            "@better-auth/drizzle-adapter": 1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)
+            "@better-auth/drizzle-adapter": 1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2))
             "@better-auth/kysely-adapter": 1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(kysely@0.28.16)
             "@better-auth/memory-adapter": 1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)
             "@better-auth/mongo-adapter": 1.6.5(@better-auth/core@1.6.5(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.3.6))(jose@6.1.3)(kysely@0.28.16)(nanostores@1.3.0))(@better-auth/utils@0.4.0)
@@ -6984,6 +7119,7 @@ snapshots:
             zod: 4.3.6
         optionalDependencies:
             drizzle-kit: 0.31.8
+            drizzle-orm: 0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2)
             next: 16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
             pg: 8.17.2
             react: 19.2.5
@@ -7300,15 +7436,13 @@ snapshots:
         transitivePeerDependencies:
             - supports-color
 
-    drizzle-orm@0.38.4(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(@types/react@19.2.14)(kysely@0.28.16)(pg@8.17.2)(react@19.2.5):
+    drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.16.0)(kysely@0.28.16)(pg@8.17.2):
         optionalDependencies:
             "@neondatabase/serverless": 1.0.2
             "@opentelemetry/api": 1.9.1
             "@types/pg": 8.16.0
-            "@types/react": 19.2.14
             kysely: 0.28.16
             pg: 8.17.2
-            react: 19.2.5
 
     dunder-proto@1.0.1:
         dependencies:
@@ -7922,7 +8056,6 @@ snapshots:
     get-tsconfig@4.14.0:
         dependencies:
             resolve-pkg-maps: 1.0.0
-        optional: true
 
     glob-parent@5.1.2:
         dependencies:
@@ -8245,6 +8378,8 @@ snapshots:
     json-schema-traverse@1.0.0: {}
 
     json-schema-typed@8.0.2: {}
+
+    json-schema@0.4.0: {}
 
     json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -9392,7 +9527,6 @@ snapshots:
             get-tsconfig: 4.14.0
         optionalDependencies:
             fsevents: 2.3.3
-        optional: true
 
     turbo@2.9.6:
         optionalDependencies:

@@ -1,5 +1,6 @@
 import type { DatabaseInstance } from "@plearn/db/client";
 import { accounts, sessions, users, verifications } from "@plearn/db/schema";
+import { usersRelations, sessionsRelations, accountsRelations } from "@plearn/db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
@@ -11,8 +12,8 @@ export interface AuthOptions {
     apiPath: `/${string}`;
     authSecret: string;
     db: DatabaseInstance;
-    googleClientId: string;
-    googleClientSecret: string;
+    googleClientId?: string;
+    googleClientSecret?: string;
 }
 
 export type AuthInstance = ReturnType<typeof createAuth>;
@@ -22,6 +23,9 @@ const authSchema = {
     sessions,
     accounts,
     verifications,
+    usersRelations,
+    sessionsRelations,
+    accountsRelations,
 };
 
 export function createAuth(options: AuthOptions) {
@@ -52,12 +56,15 @@ export function createAuth(options: AuthOptions) {
             autoSignIn: true,
             requireEmailVerification: false,
         },
-        socialProviders: {
-            google: {
-                clientId: googleClientId,
-                clientSecret: googleClientSecret,
-            },
-        },
+        socialProviders:
+            googleClientId && googleClientSecret
+                ? {
+                      google: {
+                          clientId: googleClientId,
+                          clientSecret: googleClientSecret,
+                      },
+                  }
+                : {},
     });
 }
 

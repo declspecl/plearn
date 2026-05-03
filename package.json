@@ -7,7 +7,6 @@
         "auth:generate": "pnpm dlx auth@latest generate --config ./packages/auth/auth.ts",
         "auth:info": "pnpm dlx auth@latest info --config ./packages/auth/auth.ts",
         "auth:secret": "pnpm dlx auth@latest secret",
-        "scripts:sync": "bun ./scripts/sync-root-workspace-scripts.ts",
         "lint": "turbo run lint && pnpm exec eslint --config tests/eslint.config.mjs --cache --cache-location tests/.cache/eslint tests --fix",
         "prettier": "turbo run prettier && pnpm exec prettier --cache --cache-location tests/.cache/prettier --ignore-path .prettierignore tests --write",
         "check-types": "turbo run check-types && pnpm exec tsc -p tests/tsconfig.json --noEmit",
@@ -35,7 +34,9 @@
         "db:test:down": "pnpm --filter @plearn/db run db:test:down",
         "db:test:migrate": "pnpm --filter @plearn/db run db:test:migrate",
         "db:test:push": "pnpm --filter @plearn/db run db:test:push",
-        "db:test:up": "pnpm --filter @plearn/db run db:test:up"
+        "db:test:up": "pnpm --filter @plearn/db run db:test:up",
+        "scripts:owner:bootstrap:dev": "pnpm --filter @plearn/scripts run owner:bootstrap:dev",
+        "scripts:sync-root-workspace-scripts": "pnpm --filter @plearn/scripts run sync-root-workspace-scripts"
     },
     "prettier": "@plearn/prettier",
     "devDependencies": {

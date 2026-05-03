@@ -24,6 +24,14 @@
         "@types/node": "catalog:"
     },
     "exports": {
+        "./postgres/learning/converter": {
+            "types": "./src/postgres/learning/converter.ts",
+            "default": "./dist/postgres/learning/converter.js"
+        },
+        "./postgres/learning/facade": {
+            "types": "./src/postgres/learning/facade.ts",
+            "default": "./dist/postgres/learning/facade.js"
+        },
         "./postgres/task/converter": {
             "types": "./src/postgres/task/converter.ts",
             "default": "./dist/postgres/task/converter.js"

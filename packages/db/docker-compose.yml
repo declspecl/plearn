@@ -2,7 +2,7 @@ name: plearn-dev
 
 services:
     plearn-db:
-        image: postgres
+        image: pgvector/pgvector:pg17
         restart: always
         ports:
             - "5432:5432"

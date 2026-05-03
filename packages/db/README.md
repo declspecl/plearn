@@ -24,6 +24,9 @@ The local development database defaults to:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/plearn_dev
 ```
 
+The bundled Docker images use `pgvector`-enabled Postgres so lexical and vector
+search work locally and in tests.
+
 ## Usage
 
 ```typescript

@@ -1,6 +1,5 @@
 import { createDatabaseClient } from "../db/src/client";
 import { accounts, sessions, users, verifications } from "../db/src/schema/auth";
-import { accountsRelations, sessionsRelations, usersRelations } from "../db/src/schema/relations/auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
@@ -21,9 +20,6 @@ export const auth = betterAuth({
             sessions,
             accounts,
             verifications,
-            usersRelations,
-            sessionsRelations,
-            accountsRelations,
         },
         usePlural: true,
     }),

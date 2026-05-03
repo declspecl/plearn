@@ -1,7 +1,16 @@
 import { getAppConfig } from "./app-config";
+import { VercelAiLearningAnalyzer, VercelAiLearningEmbedder } from "./learning-ai";
 import { createAuth } from "@plearn/auth/server";
+import {
+    LearnableCatalogService,
+    SemanticSearchService,
+    SentenceAnalysisService,
+    WorkspaceReviewService,
+} from "@plearn/core/learning/service";
 import { TaskService } from "@plearn/core/task/service";
 import { createDatabaseClient } from "@plearn/db/client";
+import { LearningConverter } from "@plearn/dependency/postgres/learning/converter";
+import { LearningFacade } from "@plearn/dependency/postgres/learning/facade";
 import { TaskConverter } from "@plearn/dependency/postgres/task/converter";
 import { TaskFacade } from "@plearn/dependency/postgres/task/facade";
 import "server-only";
@@ -33,7 +42,7 @@ export function getAuth() {
     cachedAuthClient = createAuth({
         webUrl,
         serverUrl: webUrl,
-        apiPath: "/api/auth",
+        apiPath: "/api",
         authSecret: appConfig.BETTER_AUTH_SECRET,
         db: getDatabaseClient(),
         googleClientId: appConfig.GOOGLE_CLIENT_ID,
@@ -49,8 +58,14 @@ export function getRepositories() {
 
 export function getServices() {
     const database = getDatabaseClient();
+    const learningFacade = new LearningFacade(database, new LearningConverter());
+    const embedder = new VercelAiLearningEmbedder();
 
     return {
+        learnableCatalogService: new LearnableCatalogService(learningFacade, learningFacade, learningFacade),
+        semanticSearchService: new SemanticSearchService(learningFacade, embedder),
+        sentenceAnalysisService: new SentenceAnalysisService(learningFacade, learningFacade, new VercelAiLearningAnalyzer()),
         taskService: new TaskService(new TaskFacade(database, new TaskConverter())),
+        workspaceReviewService: new WorkspaceReviewService(learningFacade, learningFacade, learningFacade, learningFacade, embedder),
     };
 }

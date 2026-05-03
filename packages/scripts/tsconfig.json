@@ -1,0 +1,9 @@
+{
+    "extends": "../../tools/typescript/server.tsconfig.json",
+    "compilerOptions": {
+        "composite": false,
+        "noEmit": true
+    },
+    "include": ["src", "../auth/src/**/*.ts", "../db/src/**/*.ts"],
+    "exclude": ["node_modules", "dist"]
+}

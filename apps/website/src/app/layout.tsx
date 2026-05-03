@@ -1,13 +1,17 @@
 import { Providers } from "./_components/providers";
 import "./globals.css";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, IBM_Plex_Mono, Inter } from "next/font/google";
+import { Fraunces, Geist_Mono, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
-const geistSans = Geist({
-    variable: "--font-geist-sans",
+const plexSans = IBM_Plex_Sans({
     subsets: ["latin"],
+    weight: ["400", "500", "600"],
+    variable: "--font-sans",
+});
+
+const fraunces = Fraunces({
+    subsets: ["latin"],
+    variable: "--font-display",
 });
 
 const geistMono = Geist_Mono({
@@ -22,8 +26,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "App Template",
-    description: "A clean template shell.",
+    title: "Plearn",
+    description: "Private personal learning tools.",
 };
 
 export interface RootLayoutProps {
@@ -37,10 +41,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
             className={[
                 "h-full",
                 "antialiased",
-                geistSans.variable,
                 geistMono.variable,
                 plexMono.variable,
-                inter.variable,
+                plexSans.variable,
+                fraunces.variable,
                 "font-sans",
             ].join(" ")}
             suppressHydrationWarning

@@ -41,6 +41,22 @@
             "types": "./src/task/service.ts",
             "default": "./dist/task/service.js"
         },
+        "./learning": {
+            "types": "./src/learning/index.ts",
+            "default": "./dist/learning/index.js"
+        },
+        "./learning/model": {
+            "types": "./src/learning/model/index.ts",
+            "default": "./dist/learning/model/index.js"
+        },
+        "./learning/repository": {
+            "types": "./src/learning/repository.ts",
+            "default": "./dist/learning/repository.js"
+        },
+        "./learning/service": {
+            "types": "./src/learning/service.ts",
+            "default": "./dist/learning/service.js"
+        },
         "./shared": {
             "types": "./src/shared/index.ts",
             "default": "./dist/shared/index.js"

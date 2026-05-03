@@ -1,11 +1,10 @@
-#!/usr/bin/env bun
-
 import { promises as fileSystem } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 type PackageJson = {
     name: string;
-    scripts: Record<string, string>;
+    scripts?: Record<string, string>;
 };
 
 type TurboJson = {
@@ -13,7 +12,8 @@ type TurboJson = {
 };
 
 const workspaceDirectories = ["apps", "packages", "tools"] as const;
-const repositoryRoot = process.cwd();
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = path.resolve(currentDirectory, "../../..");
 const rootPackageJsonPath = path.join(repositoryRoot, "package.json");
 const turboJsonPath = path.join(repositoryRoot, "turbo.json");
 
@@ -102,9 +102,6 @@ async function main(): Promise<void> {
         ...generatedRootScripts,
     };
 
-    await fileSystem.mkdir(path.join(repositoryRoot, "scripts"), {
-        recursive: true,
-    });
     await fileSystem.writeFile(rootPackageJsonPath, `${JSON.stringify(rootPackageJson, null, 2)}\n`, "utf8");
 
     console.log(`Synced ${Object.keys(generatedRootScripts).length} workspace root scripts into package.json.`);

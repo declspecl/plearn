@@ -13,6 +13,8 @@
     },
     "prettier": "@plearn/prettier",
     "dependencies": {
+        "@ai-sdk/deepseek": "catalog:",
+        "@ai-sdk/openai": "catalog:",
         "@base-ui/react": "catalog:",
         "@plearn/auth": "workspace:*",
         "@plearn/core": "workspace:*",
@@ -22,6 +24,7 @@
         "@plearn/utils": "workspace:*",
         "@phosphor-icons/react": "catalog:",
         "@tanstack/react-form": "catalog:",
+        "ai": "catalog:",
         "class-variance-authority": "catalog:",
         "clsx": "catalog:",
         "cmdk": "catalog:",
