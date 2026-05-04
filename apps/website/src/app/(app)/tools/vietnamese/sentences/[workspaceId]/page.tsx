@@ -23,7 +23,7 @@ export default async function SentenceWorkspaceDetailPage({ params }: SentenceWo
     }
 
     const view = (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 md:py-10">
             <WorkspaceEditor
                 initialWorkspace={{
                     id: workspace.id,

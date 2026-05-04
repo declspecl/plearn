@@ -2,9 +2,9 @@ import { WorkspaceEditor } from "@/components/learning/workspace-editor";
 
 export default function VietnameseAnalyzePage() {
     return (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 md:gap-10 md:px-6 md:py-10">
             <header className="max-w-3xl space-y-4">
-                <h1 className="text-foreground text-5xl leading-tight font-[var(--font-display)] tracking-[-0.05em]">
+                <h1 className="text-foreground text-4xl leading-tight font-[var(--font-display)] tracking-[-0.05em] md:text-5xl">
                     Sentence Decomposition
                 </h1>
                 <p className="text-muted-foreground text-lg leading-relaxed">

@@ -4,17 +4,17 @@ import Link from "next/link";
 
 export default function HomePage() {
     return (
-        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-12 px-8 py-16">
+        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-8 px-4 py-8 md:gap-12 md:px-8 md:py-16">
             <header className="max-w-2xl space-y-4">
-                <h1 className="text-foreground text-5xl leading-tight font-[var(--font-display)] tracking-[-0.05em] text-balance">
+                <h1 className="text-foreground text-4xl leading-tight font-[var(--font-display)] tracking-[-0.05em] text-balance md:text-5xl">
                     Welcome to the Tool Desk.
                 </h1>
-                <p className="text-muted-foreground text-lg leading-relaxed">
+                <p className="text-muted-foreground text-base leading-relaxed md:text-lg">
                     This is your personal space for focused learning systems. Select a tool from the gallery below to begin your session.
                 </p>
             </header>
 
-            <section className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 xl:grid-cols-3">
                 {/* Vietnamese Tool Card */}
                 <Link
                     href="/tools/vietnamese"

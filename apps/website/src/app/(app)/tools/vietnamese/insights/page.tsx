@@ -9,7 +9,7 @@ export default async function VietnameseInsightsPage() {
     });
 
     return (
-        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 md:py-10">
             <header className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
                 <div className="space-y-3">
                     <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.26em] uppercase">Vietnamese Graph View</p>

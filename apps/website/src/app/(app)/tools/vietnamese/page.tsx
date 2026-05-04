@@ -17,10 +17,10 @@ export default async function VietnameseToolPage() {
     ]);
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-8 py-12">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 md:gap-12 md:px-8 md:py-12">
             {/* The Open-Air Header */}
             <header className="space-y-4">
-                <h1 className="text-foreground text-5xl leading-tight font-[var(--font-display)] tracking-[-0.05em]">
+                <h1 className="text-foreground text-4xl leading-tight font-[var(--font-display)] tracking-[-0.05em] md:text-5xl">
                     The Translator&apos;s Workbench
                 </h1>
                 <div className="text-muted-foreground flex items-center gap-3 font-mono text-xs">
@@ -34,11 +34,11 @@ export default async function VietnameseToolPage() {
             <ArtisanWorkbenchBanner />
 
             {/* The Module Grid */}
-            <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                 {/* The Lexicon (Catalog) */}
                 <Link
                     href="/tools/vietnamese/catalog"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
                 >
                     <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
                         <Stack weight="duotone" className="size-6" />
@@ -60,7 +60,7 @@ export default async function VietnameseToolPage() {
                 {/* The Ledger (History) */}
                 <Link
                     href="/tools/vietnamese/sentences"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
                 >
                     <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
                         <ListMagnifyingGlass weight="duotone" className="size-6" />
@@ -82,7 +82,7 @@ export default async function VietnameseToolPage() {
                 {/* The Pulse (Insights) */}
                 <Link
                     href="/tools/vietnamese/insights"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
                 >
                     <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
                         <ChartLineUp weight="duotone" className="size-6" />

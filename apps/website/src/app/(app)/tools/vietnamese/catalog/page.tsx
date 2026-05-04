@@ -42,10 +42,10 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
     ]);
 
     const view = (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 md:py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
-                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">Catalog</CardTitle>
+                    <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.06em] md:text-5xl">Catalog</CardTitle>
                     <CardDescription className="max-w-3xl text-base leading-7">
                         Search your Vietnamese compendium by exact wording, English gloss, usage notes, or semantic neighborhood.
                     </CardDescription>

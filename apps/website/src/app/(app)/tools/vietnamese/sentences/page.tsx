@@ -22,10 +22,10 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
     });
 
     const view = (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 md:py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
-                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">The Ledger</CardTitle>
+                    <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.06em] md:text-5xl">The Ledger</CardTitle>
                     <CardDescription className="max-w-2xl text-base leading-7">
                         Your chronological archive of sentence workspaces. Every saved or in-progress sentence remains inspectable and
                         searchable.
