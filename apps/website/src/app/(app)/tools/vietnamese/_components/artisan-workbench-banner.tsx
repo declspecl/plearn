@@ -30,20 +30,20 @@ export function ArtisanWorkbenchBanner() {
                 <rect width="100%" height="100%" fill="url(#drafting-grid)" />
 
                 {/* Stylized Parsing Marks */}
-                <g className="text-primary/20 group-hover:text-primary/40 transition-all duration-700" transform="translate(10%, 30%)">
+                <g className="text-primary/20 group-hover:text-primary/40 transition-all duration-700" style={{ transform: "translate(10%, 30%)" }}>
                     <text x="0" y="0" fontFamily="serif" fontSize="120" opacity="0.3">
                         {`{`}
                     </text>
                 </g>
                 <g
                     className="text-foreground/10 group-hover:text-foreground/20 transition-all duration-700"
-                    transform="translate(40%, 60%)"
+                    style={{ transform: "translate(40%, 60%)" }}
                 >
                     <text x="0" y="0" fontFamily="mono" fontSize="80" opacity="0.2">
                         {`[`}
                     </text>
                 </g>
-                <g className="text-amber-500/20 transition-all duration-700 group-hover:text-amber-500/40" transform="translate(80%, 20%)">
+                <g className="text-amber-500/20 transition-all duration-700 group-hover:text-amber-500/40" style={{ transform: "translate(80%, 20%)" }}>
                     <text x="0" y="0" fontFamily="serif" fontSize="140" opacity="0.2">
                         {`}`}
                     </text>
