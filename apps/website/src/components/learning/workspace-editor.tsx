@@ -1,41 +1,16 @@
 "use client";
 
-import { colorizeWord, type VietnameseTone } from "@plearn/core/vietnamese/tone-parser";
+import { AnnotatedSentence, ToneLegend, type WordInfo } from "./annotated-sentence";
 import { api } from "@plearn/trpc/client/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
-import { startTransition, useDeferredValue, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
-
-const TONE_CLASS: Record<VietnameseTone, string> = {
-    1: "text-tone-1",
-    2: "text-tone-2",
-    3: "text-tone-3",
-    4: "text-tone-4",
-    5: "text-tone-5",
-    6: "text-tone-6",
-};
-
-function ToneColoredText({ text, className }: { text: string; className?: string }) {
-    const words = text.split(/(\s+)/);
-    return (
-        <span className={className}>
-            {words.map((segment, i) =>
-                /^\s+$/.test(segment) ? (
-                    <span key={i}>{segment}</span>
-                ) : (
-                    <span key={i} className={TONE_CLASS[colorizeWord(segment).tone]}>
-                        {segment}
-                    </span>
-                ),
-            )}
-        </span>
-    );
-}
 
 interface EditableItem {
     readonly id: string;
@@ -76,14 +51,18 @@ interface WorkspaceEditorProps {
 
 function typeLabel(type: EditableItem["proposedType"]) {
     switch (type) {
-        case "grammar_pattern":
+        case "grammar_pattern": {
             return "Grammar";
-        case "utility_word":
+        }
+        case "utility_word": {
             return "Utility";
-        case "vocabulary":
+        }
+        case "vocabulary": {
             return "Vocabulary";
-        case "phrase":
+        }
+        case "phrase": {
             return "Phrase";
+        }
     }
 }
 
@@ -91,6 +70,7 @@ function extractSentenceData(rawAnalysisJson?: Record<string, unknown>): Sentenc
     if (!rawAnalysisJson?.sentence || typeof rawAnalysisJson.sentence !== "object") return undefined;
     const s = rawAnalysisJson.sentence as Record<string, unknown>;
     if (typeof s.text !== "string" || typeof s.meaning !== "string") return undefined;
+
     return { text: s.text, meaning: s.meaning };
 }
 
@@ -172,6 +152,118 @@ function ItemCard({ item, onUpdate }: { item: EditableItem; onUpdate: (patch: Pa
                 <span>{item.mergeTargetLearnableId ? `Merge target: ${item.mergeTargetLearnableId.slice(0, 8)}` : "New learnable"}</span>
             </CardFooter>
         </Card>
+    );
+}
+
+const ANALYSIS_PHASES = [
+    { label: "Translating sentence", duration: 5000 },
+    { label: "Extracting grammar patterns", duration: 7000 },
+    { label: "Identifying vocabulary", duration: 7000 },
+    { label: "Finding catalog matches", duration: 6000 },
+] as const;
+
+function AnalysisProgress({ isActive }: { isActive: boolean }) {
+    const [phase, setPhase] = useState(0);
+    const [elapsed, setElapsed] = useState(0);
+    const startRef = useRef(Date.now());
+
+    useEffect(() => {
+        if (!isActive) {
+            setPhase(0);
+            setElapsed(0);
+            return;
+        }
+
+        startRef.current = Date.now();
+
+        let currentPhaseIdx = 0;
+        let phaseTimeout: ReturnType<typeof setTimeout>;
+
+        function scheduleNext() {
+            if (currentPhaseIdx >= ANALYSIS_PHASES.length - 1) return;
+            phaseTimeout = setTimeout(() => {
+                currentPhaseIdx++;
+                setPhase(currentPhaseIdx);
+                scheduleNext();
+            }, ANALYSIS_PHASES[currentPhaseIdx]!.duration);
+        }
+        scheduleNext();
+
+        const elapsedTimer = setInterval(() => {
+            setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+        }, 1000);
+
+        return () => {
+            clearTimeout(phaseTimeout);
+            clearInterval(elapsedTimer);
+        };
+    }, [isActive]);
+
+    if (!isActive) return null;
+
+    const currentPhase = ANALYSIS_PHASES[phase]!;
+
+    return (
+        <motion.div
+            className="border-border bg-card overflow-hidden rounded-xl border p-6"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+        >
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <AnimatePresence mode="wait">
+                        <motion.p
+                            key={phase}
+                            className="text-foreground text-sm font-medium"
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 8 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {currentPhase.label}
+                        </motion.p>
+                    </AnimatePresence>
+                    <span className="text-muted-foreground text-xs tabular-nums">{elapsed}s</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {ANALYSIS_PHASES.map((_, i) => (
+                        <div key={i} className="bg-muted relative h-1 flex-1 overflow-hidden rounded-full">
+                            {i < phase ? (
+                                <motion.div
+                                    className="bg-foreground/60 absolute inset-0 rounded-full"
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: 1 }}
+                                    transition={{ duration: 0.3 }}
+                                    style={{ transformOrigin: "left" }}
+                                />
+                            ) : i === phase ? (
+                                <motion.div
+                                    className="bg-foreground/40 absolute inset-0 rounded-full"
+                                    animate={{ scaleX: [0, 0.7, 0.4, 0.9] }}
+                                    transition={{ duration: currentPhase.duration / 1000, ease: "easeInOut" }}
+                                    style={{ transformOrigin: "left" }}
+                                />
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex gap-1.5">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                        <motion.div
+                            key={i}
+                            className="bg-foreground/20 h-5 rounded"
+                            style={{ width: `${12 + Math.random() * 20}%` }}
+                            animate={{ opacity: [0.2, 0.5, 0.2] }}
+                            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                        />
+                    ))}
+                </div>
+            </div>
+        </motion.div>
     );
 }
 
@@ -282,6 +374,21 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const components = workspace?.items.filter((i) => i.proposedType === "grammar_pattern" || i.proposedType === "phrase") ?? [];
     const words = workspace?.items.filter((i) => i.proposedType === "vocabulary" || i.proposedType === "utility_word") ?? [];
 
+    const wordInfoItems: WordInfo[] = useMemo(() => {
+        if (!workspace) return [];
+
+        return workspace.items.map((item) => ({
+            text: item.proposedText,
+            translation: item.proposedTranslation,
+            type: item.proposedType,
+            notes: item.proposedNotes,
+            formula: typeof item.proposedJson.formula === "string" ? item.proposedJson.formula : undefined,
+            exampleHints: Array.isArray(item.proposedJson.exampleHints)
+                ? (item.proposedJson.exampleHints as Array<{ exampleText: string; translation: string }>)
+                : [],
+        }));
+    }, [workspace]);
+
     return (
         <div className="space-y-8">
             <Card className="overflow-hidden shadow-lg">
@@ -311,15 +418,26 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                 </CardContent>
             </Card>
 
+            <AnimatePresence>
+                {analyzeMutation.isPending ? <AnalysisProgress isActive={analyzeMutation.isPending} /> : null}
+            </AnimatePresence>
+
             {workspace ? (
                 <div className="space-y-8">
                     {/* Section 1: Sentence Translation */}
                     {sentenceData ? (
                         <section className="space-y-3">
-                            <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">Sentence</h2>
+                            <div className="flex flex-wrap items-end justify-between gap-4">
+                                <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">Sentence</h2>
+                                <ToneLegend />
+                            </div>
                             <Card>
                                 <CardContent className="space-y-2 p-6">
-                                    <ToneColoredText text={sentenceData.text} className="text-xl leading-relaxed font-medium" />
+                                    <AnnotatedSentence
+                                        sentence={sentenceData.text}
+                                        items={wordInfoItems}
+                                        className="text-xl leading-relaxed font-medium"
+                                    />
                                     <p className="text-muted-foreground">{sentenceData.meaning}</p>
                                 </CardContent>
                             </Card>

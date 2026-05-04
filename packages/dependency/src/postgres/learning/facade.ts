@@ -341,6 +341,14 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         return learnable;
     }
 
+    public async findAllByNormalizedText(input: { languageId: string; normalizedText: string }) {
+        const rows = await this.database
+            .select()
+            .from(learningLearnables)
+            .where(and(eq(learningLearnables.languageId, input.languageId), eq(learningLearnables.normalizedText, input.normalizedText)));
+        return this.hydrateLearnables(rows);
+    }
+
     public async findAliasMatch(input: { languageId: string; normalizedText: string }) {
         const [alias] = await this.database
             .select()

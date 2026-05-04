@@ -16,11 +16,13 @@ export class QrCode {
 
     public static encodeText(text: string, ecl: QrCodeEcc): QrCode {
         const segs: Array<QrSegment> = QrSegment.makeSegments(text);
+
         return QrCode.encodeSegments(segs, ecl);
     }
 
     public static encodeBinary(data: Readonly<Array<byte>>, ecl: QrCodeEcc): QrCode {
         const seg: QrSegment = QrSegment.makeBytes(data);
+
         return QrCode.encodeSegments([seg], ecl);
     }
 
@@ -51,7 +53,7 @@ export class QrCode {
             if (boostEcl && dataUsedBits <= QrCode.getNumDataCodewords(version, newEcl) * 8) ecl = newEcl;
         }
 
-        let bb: Array<bit> = [];
+        const bb: Array<bit> = [];
         for (const seg of segs) {
             appendBits(seg.mode.modeBits, 4, bb);
             appendBits(seg.numChars, seg.mode.numCharCountBits(version), bb);
@@ -67,7 +69,7 @@ export class QrCode {
 
         for (let padByte = 0xec; bb.length < dataCapacityBits; padByte ^= 0xec ^ 0x11) appendBits(padByte, 8, bb);
 
-        let dataCodewords: Array<byte> = [];
+        const dataCodewords: Array<byte> = [];
         while (dataCodewords.length * 8 < bb.length) dataCodewords.push(0);
         bb.forEach((b: bit, i: int) => (dataCodewords[i >>> 3]! |= b << (7 - (i & 7))));
 
@@ -89,11 +91,11 @@ export class QrCode {
         if (msk < -1 || msk > 7) throw new RangeError("Mask value out of range");
         this.size = version * 4 + 17;
 
-        let row: Array<boolean> = [];
+        const row: Array<boolean> = [];
         for (let i = 0; i < this.size; i++) row.push(false);
         for (let i = 0; i < this.size; i++) {
-            this.modules.push(row.slice());
-            this.isFunction.push(row.slice());
+            this.modules.push([...row]);
+            this.isFunction.push([...row]);
         }
 
         this.drawFunctionPatterns();
@@ -101,7 +103,7 @@ export class QrCode {
         this.drawCodewords(allCodewords);
 
         if (msk == -1) {
-            let minPenalty: int = 1000000000;
+            let minPenalty: int = 1_000_000_000;
             for (let i = 0; i < 8; i++) {
                 this.applyMask(i);
                 this.drawFormatBits(i);
@@ -151,8 +153,8 @@ export class QrCode {
     private drawFormatBits(mask: int): void {
         const data: int = (this.errorCorrectionLevel.formatBits << 3) | mask;
         let rem: int = data;
-        for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
-        const bits = ((data << 10) | rem) ^ 0x5412;
+        for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x5_37);
+        const bits = ((data << 10) | rem) ^ 0x54_12;
 
         for (let i = 0; i <= 5; i++) this.setFunctionModule(8, i, getBit(bits, i));
         this.setFunctionModule(8, 7, getBit(bits, 6));
@@ -169,7 +171,7 @@ export class QrCode {
         if (this.version < 7) return;
 
         let rem: int = this.version;
-        for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1f25);
+        for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1f_25);
         const bits: int = (this.version << 12) | rem;
 
         for (let i = 0; i < 18; i++) {
@@ -214,23 +216,24 @@ export class QrCode {
         const numShortBlocks: int = numBlocks - (rawCodewords % numBlocks);
         const shortBlockLen: int = Math.floor(rawCodewords / numBlocks);
 
-        let blocks: Array<Array<byte>> = [];
+        const blocks: Array<Array<byte>> = [];
         const rsDiv: Array<byte> = QrCode.reedSolomonComputeDivisor(blockEccLen);
         for (let i = 0, k = 0; i < numBlocks; i++) {
-            let dat: Array<byte> = data.slice(k, k + shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1));
+            const dat: Array<byte> = data.slice(k, k + shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1));
             k += dat.length;
             const ecc: Array<byte> = QrCode.reedSolomonComputeRemainder(dat, rsDiv);
             if (i < numShortBlocks) dat.push(0);
             blocks.push(dat.concat(ecc));
         }
 
-        let result: Array<byte> = [];
+        const result: Array<byte> = [];
         for (let i = 0; i < blocks[0]!.length; i++) {
-            blocks.forEach((block, j) => {
+            for (const [j, block] of blocks.entries()) {
                 if (i != shortBlockLen - blockEccLen || j >= numShortBlocks) result.push(block[i]!);
-            });
+            }
         }
         assert(result.length == rawCodewords);
+
         return result;
     }
 
@@ -260,32 +263,41 @@ export class QrCode {
             for (let x = 0; x < this.size; x++) {
                 let invert: boolean;
                 switch (mask) {
-                    case 0:
+                    case 0: {
                         invert = (x + y) % 2 == 0;
                         break;
-                    case 1:
+                    }
+                    case 1: {
                         invert = y % 2 == 0;
                         break;
-                    case 2:
+                    }
+                    case 2: {
                         invert = x % 3 == 0;
                         break;
-                    case 3:
+                    }
+                    case 3: {
                         invert = (x + y) % 3 == 0;
                         break;
-                    case 4:
+                    }
+                    case 4: {
                         invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 == 0;
                         break;
-                    case 5:
+                    }
+                    case 5: {
                         invert = ((x * y) % 2) + ((x * y) % 3) == 0;
                         break;
-                    case 6:
+                    }
+                    case 6: {
                         invert = (((x * y) % 2) + ((x * y) % 3)) % 2 == 0;
                         break;
-                    case 7:
+                    }
+                    case 7: {
                         invert = (((x + y) % 2) + ((x * y) % 3)) % 2 == 0;
                         break;
-                    default:
+                    }
+                    default: {
                         throw new Error("Unreachable");
+                    }
                 }
                 if (!this.isFunction[y]![x]! && invert) this.modules[y]![x] = !this.modules[y]![x]!;
             }
@@ -298,7 +310,7 @@ export class QrCode {
         for (let y = 0; y < this.size; y++) {
             let runColor = false;
             let runX = 0;
-            let runHistory = [0, 0, 0, 0, 0, 0, 0];
+            const runHistory = [0, 0, 0, 0, 0, 0, 0];
             for (let x = 0; x < this.size; x++) {
                 if (this.modules[y]![x] === runColor) {
                     runX++;
@@ -316,7 +328,7 @@ export class QrCode {
         for (let x = 0; x < this.size; x++) {
             let runColor = false;
             let runY = 0;
-            let runHistory = [0, 0, 0, 0, 0, 0, 0];
+            const runHistory = [0, 0, 0, 0, 0, 0, 0];
             for (let y = 0; y < this.size; y++) {
                 if (this.modules[y]![x] === runColor) {
                     runY++;
@@ -346,6 +358,7 @@ export class QrCode {
         const k: int = Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1;
         assert(0 <= k && k <= 9);
         result += k * QrCode.PENALTY_N4;
+
         return result;
     }
 
@@ -354,8 +367,9 @@ export class QrCode {
         else {
             const numAlign: int = Math.floor(this.version / 7) + 2;
             const step: int = this.version == 32 ? 26 : Math.ceil((this.version * 4 + 4) / (numAlign * 2 - 2)) * 2;
-            let result: Array<int> = [6];
+            const result: Array<int> = [6];
             for (let pos = this.size - 7; result.length < numAlign; pos -= step) result.splice(1, 0, pos);
+
             return result;
         }
     }
@@ -368,6 +382,7 @@ export class QrCode {
             result -= (25 * numAlign - 10) * numAlign - 55;
             if (ver >= 7) result -= 36;
         }
+
         return result;
     }
 
@@ -380,7 +395,7 @@ export class QrCode {
 
     private static reedSolomonComputeDivisor(degree: int): Array<byte> {
         if (degree < 1 || degree > 255) throw new RangeError("Degree out of range");
-        let result: Array<byte> = [];
+        const result: Array<byte> = [];
         for (let i = 0; i < degree - 1; i++) result.push(0);
         result.push(1);
 
@@ -392,16 +407,18 @@ export class QrCode {
             }
             root = QrCode.reedSolomonMultiply(root, 0x02);
         }
+
         return result;
     }
 
     private static reedSolomonComputeRemainder(data: Readonly<Array<byte>>, divisor: Readonly<Array<byte>>): Array<byte> {
-        let result: Array<byte> = divisor.map((_) => 0);
+        const result: Array<byte> = divisor.map((_) => 0);
         for (const b of data) {
             const factor: byte = b ^ (result.shift() as byte);
             result.push(0);
-            divisor.forEach((coef, i) => (result[i]! ^= QrCode.reedSolomonMultiply(coef, factor)));
+            for (const [i, coef] of divisor.entries()) result[i]! ^= QrCode.reedSolomonMultiply(coef, factor);
         }
+
         return result;
     }
 
@@ -409,15 +426,17 @@ export class QrCode {
         if (x >>> 8 != 0 || y >>> 8 != 0) throw new RangeError("Byte out of range");
         let z: int = 0;
         for (let i = 7; i >= 0; i--) {
-            z = (z << 1) ^ ((z >>> 7) * 0x11d);
+            z = (z << 1) ^ ((z >>> 7) * 0x1_1d);
             z ^= ((y >>> i) & 1) * x;
         }
+
         return z as byte;
     }
 
     private finderPenaltyCountPatterns(runHistory: Readonly<Array<int>>): int {
         const n: int = runHistory[1]!;
         const core: boolean = n > 0 && runHistory[2] === n && runHistory[3] === n * 3 && runHistory[4] === n && runHistory[5] === n;
+
         return (
             (core && runHistory[0]! >= n * 4 && runHistory[6]! >= n ? 1 : 0) +
             (core && runHistory[6]! >= n * 4 && runHistory[0]! >= n ? 1 : 0)
@@ -431,6 +450,7 @@ export class QrCode {
         }
         currentRunLength += this.size;
         this.finderPenaltyAddHistory(currentRunLength, runHistory);
+
         return this.finderPenaltyCountPatterns(runHistory);
     }
 
@@ -503,25 +523,27 @@ export class QrSegment {
     public static Mode: typeof QrSegmentMode;
 
     public static makeBytes(data: Readonly<Array<byte>>): QrSegment {
-        let bb: Array<bit> = [];
+        const bb: Array<bit> = [];
         for (const b of data) appendBits(b, 8, bb);
+
         return new QrSegment(QrSegment.Mode.BYTE, data.length, bb);
     }
 
     public static makeNumeric(digits: string): QrSegment {
         if (!QrSegment.isNumeric(digits)) throw new RangeError("String contains non-numeric characters");
-        let bb: Array<bit> = [];
+        const bb: Array<bit> = [];
         for (let i = 0; i < digits.length; ) {
             const n: int = Math.min(digits.length - i, 3);
-            appendBits(parseInt(digits.substring(i, i + n), 10), n * 3 + 1, bb);
+            appendBits(Number.parseInt(digits.substring(i, i + n), 10), n * 3 + 1, bb);
             i += n;
         }
+
         return new QrSegment(QrSegment.Mode.NUMERIC, digits.length, bb);
     }
 
     public static makeAlphanumeric(text: string): QrSegment {
         if (!QrSegment.isAlphanumeric(text)) throw new RangeError("String contains unencodable characters");
-        let bb: Array<bit> = [];
+        const bb: Array<bit> = [];
         let i: int;
         for (i = 0; i + 2 <= text.length; i += 2) {
             let temp: int = QrSegment.ALPHANUMERIC_CHARSET.indexOf(text.charAt(i)) * 45;
@@ -529,6 +551,7 @@ export class QrSegment {
             appendBits(temp, 11, bb);
         }
         if (i < text.length) appendBits(QrSegment.ALPHANUMERIC_CHARSET.indexOf(text.charAt(i)), 6, bb);
+
         return new QrSegment(QrSegment.Mode.ALPHANUMERIC, text.length, bb);
     }
 
@@ -555,11 +578,11 @@ export class QrSegment {
         this.mode = mode;
         this.numChars = numChars;
         if (numChars < 0) throw new RangeError("Invalid argument");
-        this.bitData = bitData.slice();
+        this.bitData = [...bitData];
     }
 
     public getData(): Array<bit> {
-        return this.bitData.slice();
+        return [...this.bitData];
     }
 
     public static getTotalBits(segs: Readonly<Array<QrSegment>>, version: int): number {
@@ -569,19 +592,22 @@ export class QrSegment {
             if (seg.numChars >= 1 << ccbits) return Infinity;
             result += 4 + ccbits + seg.bitData.length;
         }
+
         return result;
     }
 
     private static toUtf8ByteArray(str: string): Array<byte> {
         str = encodeURI(str);
-        let result: Array<byte> = [];
+        const result: Array<byte> = [];
         for (let i = 0; i < str.length; i++) {
-            if (str.charAt(i) != "%") result.push(str.charCodeAt(i));
-            else {
-                result.push(parseInt(str.substring(i + 1, i + 3), 16));
+            if (str.charAt(i) == "%") {
+                result.push(Number.parseInt(str.substring(i + 1, i + 3), 16));
                 i += 2;
+            } else {
+                result.push(str.charCodeAt(i));
             }
         }
+
         return result;
     }
 

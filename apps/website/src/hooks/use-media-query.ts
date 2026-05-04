@@ -18,11 +18,13 @@ type BreakpointQuery = Breakpoint | `max-${Breakpoint}` | `${Breakpoint}:max-${B
 
 function resolveMin(value: Breakpoint | number): string {
     const px = typeof value === "number" ? value : BREAKPOINTS[value];
+
     return `(min-width: ${px}px)`;
 }
 
 function resolveMax(value: Breakpoint | number): string {
     const px = typeof value === "number" ? value : BREAKPOINTS[value];
+
     return `(max-width: ${px - 1}px)`;
 }
 
@@ -34,6 +36,7 @@ function parseQuery(query: BreakpointQuery | MediaQueryInput | (string & {})): s
         if (query.pointer === "coarse") parts.push("(pointer: coarse)");
         if (query.pointer === "fine") parts.push("(pointer: fine)");
         if (parts.length === 0) return "(min-width: 0px)";
+
         return parts.join(" and ");
     }
 
@@ -68,17 +71,19 @@ export function useMediaQuery(query: BreakpointQuery | MediaQueryInput | (string
 
     const subscribe = useCallback(
         (callback: () => void) => {
-            if (typeof window === "undefined") return () => {};
-            const mql = window.matchMedia(mediaQuery);
+            if (globalThis.window === undefined) return () => {};
+            const mql = globalThis.matchMedia(mediaQuery);
             mql.addEventListener("change", callback);
+
             return () => mql.removeEventListener("change", callback);
         },
         [mediaQuery],
     );
 
     const getSnapshot = useCallback(() => {
-        if (typeof window === "undefined") return false;
-        return window.matchMedia(mediaQuery).matches;
+        if (globalThis.window === undefined) return false;
+
+        return globalThis.matchMedia(mediaQuery).matches;
     }, [mediaQuery]);
 
     return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

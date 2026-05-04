@@ -4,6 +4,7 @@ import "server-only";
 
 export async function getSession() {
     const requestHeaders = new Headers(await headers());
+
     return getAuth().api.getSession({ headers: requestHeaders });
 }
 

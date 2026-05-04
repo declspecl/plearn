@@ -50,7 +50,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                         <div>
                             <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">Aliases</p>
                             <div className="mt-2 flex flex-wrap gap-2">
-                                {learnable.aliases.length ? (
+                                {learnable.aliases.length > 0 ? (
                                     learnable.aliases.map((alias) => <Badge key={alias}>{alias}</Badge>)
                                 ) : (
                                     <span>None</span>

@@ -409,6 +409,17 @@ export class LearnableCatalogService {
     public listRelatedLearnables(learnableId: LearnableId) {
         return this.learnables.listRelatedLearnables(learnableId);
     }
+
+    public async lookupByText(languageCode: string, text: string): Promise<Learnable | null> {
+        const language = await this.learnables.findLanguageByCode(languageCode);
+        if (!language) return null;
+
+        const normalizedText = normalizeLearnableText(text);
+        const matches = await this.learnables.findAllByNormalizedText({ languageId: language.id, normalizedText });
+        if (matches.length > 0) return matches[0]!;
+
+        return (await this.learnables.findAliasMatch({ languageId: language.id, normalizedText })) ?? null;
+    }
 }
 
 export class SemanticSearchService {

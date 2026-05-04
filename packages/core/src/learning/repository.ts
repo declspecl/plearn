@@ -117,6 +117,7 @@ export interface LearnableRepository {
     listLearnables(filters: LearnableListFilters): Promise<readonly Learnable[]>;
     findLearnableById(id: LearnableId): Promise<Learnable | undefined>;
     findExactMatch(input: { languageId: Language["id"]; type: LearnableType; normalizedText: string }): Promise<Learnable | undefined>;
+    findAllByNormalizedText(input: { languageId: Language["id"]; normalizedText: string }): Promise<readonly Learnable[]>;
     findAliasMatch(input: { languageId: Language["id"]; normalizedText: string }): Promise<Learnable | undefined>;
     createLearnable(input: CreateLearnableInput): Promise<Learnable>;
     updateLearnable(id: LearnableId, input: UpdateLearnableInput): Promise<Learnable>;

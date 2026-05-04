@@ -47,7 +47,7 @@ export const learningRouter = createTRPCRouter({
                         id: z.string().transform((value) => createWorkspaceItemId(value)),
                         proposedText: z.string().min(1),
                         proposedTranslation: z.string().min(1),
-                        proposedNotes: z.string().min(1),
+                        proposedNotes: z.string(),
                         proposedJson: z.record(z.string(), z.unknown()),
                         reviewAction: reviewActionSchema,
                         mergeTargetLearnableId: z
@@ -126,5 +126,15 @@ export const learningRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             return ctx.services.learnableCatalogService.listRelatedLearnables(input.learnableId);
+        }),
+    lookupByText: protectedProcedure
+        .input(
+            z.object({
+                languageCode: z.string().min(2),
+                text: z.string().min(1),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.learnableCatalogService.lookupByText(input.languageCode, input.text);
         }),
 });

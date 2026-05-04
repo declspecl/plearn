@@ -107,7 +107,7 @@ function SidebarProvider({
                 _setOpen(openState);
             }
 
-            if (typeof window !== "undefined") {
+            if (globalThis.window !== undefined) {
                 document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
             }
         },
@@ -174,6 +174,7 @@ function Sidebar({
         }
 
         const options = typeof resizable === "boolean" ? {} : resizable;
+
         return {
             maxWidth: options.maxWidth ?? Number.POSITIVE_INFINITY,
             minWidth: options.minWidth ?? SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH,
@@ -344,12 +345,12 @@ function SidebarRail({
                 return;
             }
             if (resizeState.rafId !== null) {
-                window.cancelAnimationFrame(resizeState.rafId);
+                globalThis.cancelAnimationFrame(resizeState.rafId);
             }
-            resizeState.transitionTargets.forEach((element) => {
+            for (const element of resizeState.transitionTargets) {
                 element.style.removeProperty("transition-duration");
-            });
-            if (resolvedResizable?.storageKey && typeof window !== "undefined") {
+            }
+            if (resolvedResizable?.storageKey && globalThis.window !== undefined) {
                 setLocalStorageItem(resolvedResizable.storageKey, resizeState.width);
             }
             resolvedResizable?.onResize?.(resizeState.width);
@@ -386,9 +387,9 @@ function SidebarRail({
                 sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-gap']"),
                 sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
             ].filter((element): element is HTMLElement => element !== null);
-            transitionTargets.forEach((element) => {
+            for (const element of transitionTargets) {
                 element.style.setProperty("transition-duration", "0ms");
-            });
+            }
 
             event.preventDefault();
             event.stopPropagation();
@@ -431,7 +432,7 @@ function SidebarRail({
                 return;
             }
 
-            resizeState.rafId = window.requestAnimationFrame(() => {
+            resizeState.rafId = globalThis.requestAnimationFrame(() => {
                 const activeResizeState = resizeStateRef.current;
                 if (!activeResizeState || !resolvedResizable) return;
 
@@ -494,10 +495,12 @@ function SidebarRail({
             if (suppressClickRef.current) {
                 suppressClickRef.current = false;
                 event.preventDefault();
+
                 return;
             }
             if (resolvedResizable && open) {
                 event.preventDefault();
+
                 return;
             }
             toggleSidebar();
@@ -506,7 +509,7 @@ function SidebarRail({
     );
 
     React.useEffect(() => {
-        if (!resolvedResizable?.storageKey || typeof window === "undefined") return;
+        if (!resolvedResizable?.storageKey || globalThis.window === undefined) return;
         const rail = railRef.current;
         if (!rail) return;
         const wrapper = rail.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
@@ -523,11 +526,11 @@ function SidebarRail({
         return () => {
             const resizeState = resizeStateRef.current;
             if (resizeState?.rafId != null) {
-                window.cancelAnimationFrame(resizeState.rafId);
+                globalThis.cancelAnimationFrame(resizeState.rafId);
             }
-            resizeState?.transitionTargets.forEach((element) => {
+            for (const element of resizeState?.transitionTargets) {
                 element.style.removeProperty("transition-duration");
-            });
+            }
             document.body.style.removeProperty("cursor");
             document.body.style.removeProperty("user-select");
         };

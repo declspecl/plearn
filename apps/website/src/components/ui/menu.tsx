@@ -246,7 +246,7 @@ function MenuSubPopup({
     sideOffset?: MenuPrimitive.Positioner.Props["sideOffset"];
     alignOffset?: MenuPrimitive.Positioner.Props["alignOffset"];
 }) {
-    const defaultAlignOffset = align !== "center" ? -5 : undefined;
+    const defaultAlignOffset = align === "center" ? undefined : -5;
 
     return (
         <MenuPopup

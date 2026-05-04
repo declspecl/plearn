@@ -1,125 +1,51 @@
-import { createTRPCCaller } from "@/lib/server/trpc-caller";
+import { ArtisanVietnameseLandmark } from "./_components/artisan-vietnamese-landmark";
+import { ArrowRight, Plus } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 
-export default async function HomePage() {
-    const caller = await createTRPCCaller();
-    const [learnables, workspaces] = await Promise.all([
-        caller.learning.listLearnables({
-            languageCode: "vi",
-            limit: 100,
-            sort: "frequency",
-        }),
-        caller.learning.listSentenceWorkspaces({
-            languageCode: "vi",
-        }),
-    ]);
-
+export default function HomePage() {
     return (
-        <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-6 py-10">
-            <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-                <Card className="border-border bg-accent overflow-hidden shadow-lg">
-                    <CardHeader className="gap-4 pb-8">
-                        <Badge variant="outline" className="w-fit">
-                            Auth-Gated Learning Hub
-                        </Badge>
-                        <CardTitle className="text-foreground max-w-3xl text-5xl leading-none font-[var(--font-display)] tracking-[-0.06em] text-balance">
-                            Build a private compendium of patterns, phrases, and Vietnamese intuition.
-                        </CardTitle>
-                        <CardDescription className="max-w-2xl text-base leading-7">
-                            Plearn is now organized as a private tool deck. The first system turns your English inner monologue into
-                            reusable Vietnamese learnables, ranks them by actual usage, and keeps a searchable memory of every sentence you
-                            fed into it.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardFooter className="border-border bg-card/35 flex flex-wrap items-center gap-3 border-t">
-                        <Button render={<Link href="/tools/vietnamese/analyze" />}>Open Vietnamese Tool</Button>
-                        <Button render={<Link href="/tools/vietnamese/catalog" />} variant="secondary">
-                            Browse Catalog
-                        </Button>
-                    </CardFooter>
-                </Card>
+        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-12 px-8 py-16">
+            <header className="max-w-2xl space-y-4">
+                <h1 className="text-foreground text-5xl leading-tight font-[var(--font-display)] tracking-[-0.05em] text-balance">
+                    Welcome to the Tool Desk.
+                </h1>
+                <p className="text-muted-foreground text-lg leading-relaxed">
+                    This is your personal space for focused learning systems. Select a tool from the gallery below to begin your session.
+                </p>
+            </header>
 
-                <div className="grid gap-4">
-                    {[
-                        { label: "Learnables", value: learnables.length },
-                        { label: "Sentence Workspaces", value: workspaces.length },
-                        { label: "Top Type", value: learnables[0]?.type ?? "none yet" },
-                    ].map((stat) => (
-                        <Card key={stat.label}>
-                            <CardHeader>
-                                <CardDescription>{stat.label}</CardDescription>
-                                <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.04em]">{stat.value}</CardTitle>
-                            </CardHeader>
-                        </Card>
-                    ))}
-                </div>
-            </section>
+            <section className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+                {/* Vietnamese Tool Card */}
+                <Link
+                    href="/tools/vietnamese"
+                    className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md xl:col-span-2"
+                >
+                    <ArtisanVietnameseLandmark />
 
-            <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Tool Deck</CardTitle>
-                        <CardDescription>
-                            Central routing for your personal learning systems. Vietnamese is the first live module.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="border-border bg-accent rounded-[1.5rem] border p-5">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="space-y-3">
-                                    <Badge variant="secondary">Live</Badge>
-                                    <p className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Vietnamese</p>
-                                    <p className="text-muted-foreground max-w-lg text-sm leading-6">
-                                        Sentence decomposition, review-first catalog capture, lexical search, and vector similarity.
-                                    </p>
-                                </div>
-                                <div className="text-muted-foreground grid gap-2 text-right text-xs tracking-[0.2em] uppercase">
-                                    <span>Analyze</span>
-                                    <span>Catalog</span>
-                                    <span>History</span>
-                                </div>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-foreground text-3xl font-[var(--font-display)] tracking-[-0.04em]">Vietnamese</h2>
+                            <div className="bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full transition-transform duration-300 group-hover:translate-x-1">
+                                <ArrowRight className="size-5" weight="bold" />
                             </div>
                         </div>
-                    </CardContent>
-                    <CardFooter className="gap-3">
-                        <Button render={<Link href="/tools/vietnamese" />} size="sm">
-                            Overview
-                        </Button>
-                        <Button render={<Link href="/tools/vietnamese/sentences" />} size="sm" variant="secondary">
-                            Sentence History
-                        </Button>
-                    </CardFooter>
-                </Card>
+                        <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
+                            An auth-gated learning hub. Translate your inner monologue, extract vocabulary, and build a reusable compendium
+                            of natural sentence structures.
+                        </p>
+                    </div>
+                </Link>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Recent Catalog Pulse</CardTitle>
-                        <CardDescription>
-                            Highest-frequency learnables are the most reusable parts of your actual thought stream.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {learnables.slice(0, 5).map((learnable) => (
-                            <Link
-                                key={learnable.id}
-                                className="border-border bg-muted hover:border-ring hover:bg-card flex items-center justify-between rounded-2xl border px-4 py-3 transition"
-                                href={`/tools/vietnamese/catalog/${learnable.id}`}
-                            >
-                                <div>
-                                    <p className="text-foreground font-medium">{learnable.canonicalText}</p>
-                                    <p className="text-muted-foreground text-sm">{learnable.translation}</p>
-                                </div>
-                                <div className="text-muted-foreground text-right text-xs tracking-[0.18em] uppercase">
-                                    <p>{learnable.type.replaceAll("_", " ")}</p>
-                                    <p>{learnable.occurrenceCount}x</p>
-                                </div>
-                            </Link>
-                        ))}
-                    </CardContent>
-                </Card>
+                {/* Placeholder for Future Tool */}
+                <div className="border-border bg-accent/30 hover:bg-accent/50 flex min-h-[300px] cursor-default flex-col items-center justify-center gap-4 rounded-[2rem] border border-dashed p-8 text-center transition-colors">
+                    <div className="bg-background text-muted-foreground rounded-full p-4 shadow-sm">
+                        <Plus className="size-6" weight="duotone" />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-foreground font-medium">New Tool Module</p>
+                        <p className="text-muted-foreground text-sm">System expansion pending</p>
+                    </div>
+                </div>
             </section>
         </div>
     );

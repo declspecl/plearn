@@ -29,6 +29,7 @@ export function LoginForm() {
 
             if (result.error) {
                 setError(result.error.message ?? "Unable to sign in.");
+
                 return;
             }
 
