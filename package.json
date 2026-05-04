@@ -36,7 +36,10 @@
         "db:test:push": "pnpm --filter @plearn/db run db:test:push",
         "db:test:up": "pnpm --filter @plearn/db run db:test:up",
         "scripts:owner:bootstrap:dev": "pnpm --filter @plearn/scripts run owner:bootstrap:dev",
-        "scripts:sync-root-workspace-scripts": "pnpm --filter @plearn/scripts run sync-root-workspace-scripts"
+        "scripts:sync-root-workspace-scripts": "pnpm --filter @plearn/scripts run sync-root-workspace-scripts",
+        "db:dev:compiler": "pnpm --filter @plearn/db run dev:compiler",
+        "db:dev:db-tools": "pnpm --filter @plearn/db run dev:db-tools",
+        "scripts:owner:bootstrap:prod": "pnpm --filter @plearn/scripts run owner:bootstrap:prod"
     },
     "prettier": "@plearn/prettier",
     "devDependencies": {
