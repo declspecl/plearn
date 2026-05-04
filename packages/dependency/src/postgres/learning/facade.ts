@@ -1,4 +1,4 @@
-import { LearningConverter } from "./converter";
+import type { LearningConverter } from "./converter";
 import type { CreateLearnableInput, LearnableMatch, UpdateLearnableInput } from "@plearn/core/learning/model";
 import type {
     CreateWorkspaceInput,
@@ -43,6 +43,10 @@ function logQueryTiming(method: string, start: number) {
 
 function normalizeQuery(value: string): string {
     return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
+}
+
+function createRelationRowId(fromLearnableId: string, toLearnableId: string, relationType: string): string {
+    return `${relationType}:${fromLearnableId}:${toLearnableId}`;
 }
 
 export class LearningFacade implements SentenceWorkspaceRepository, LearnableRepository, OccurrenceRepository, LearningSearchRepository {
@@ -118,7 +122,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
 
         return this.converter.convertWorkspace(
             workspaceRow,
-            itemRows.sort((left, right) => left.position - right.position).map((item) => this.converter.convertWorkspaceItem(item)),
+            itemRows.toSorted((left, right) => left.position - right.position).map((item) => this.converter.convertWorkspaceItem(item)),
         );
     }
 
@@ -187,7 +191,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         await this.database
             .update(learningWorkspaceItems)
             .set({
-                duplicateSuggestionsJson: input.duplicateSuggestions as unknown as Record<string, unknown>,
+                duplicateSuggestionsJson: structuredClone(input.duplicateSuggestions),
                 duplicateSuggestionsStatus: input.status,
                 duplicateSuggestionsComputedAt: new Date(),
                 duplicateSuggestionsError: input.error ?? null,
@@ -247,6 +251,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
 
         if (!workspaceRow) {
             logQueryTiming("findWorkspaceById", startedAt);
+
             return undefined;
         }
 
@@ -261,6 +266,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             itemRows.map((item) => this.converter.convertWorkspaceItem(item)),
         );
         logQueryTiming("findWorkspaceById", startedAt);
+
         return result;
     }
 
@@ -296,7 +302,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
 
         const shouldIncludeItems = options?.includeItems ?? true;
         const items =
-            shouldIncludeItems && rows.length
+            shouldIncludeItems && rows.length > 0
                 ? await this.database
                       .select()
                       .from(learningWorkspaceItems)
@@ -319,11 +325,13 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         );
 
         logQueryTiming("listWorkspaces", startedAt);
+
         return result;
     }
 
     public async findLanguageByCode(code: string) {
         const [row] = await this.database.select().from(learningLanguages).where(eq(learningLanguages.code, code)).limit(1);
+
         return row ? this.converter.convertLanguage(row) : undefined;
     }
 
@@ -379,7 +387,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         const rows = await this.database
             .select()
             .from(learningLearnables)
-            .where(conditions.length ? and(...conditions) : undefined)
+            .where(conditions.length > 0 ? and(...conditions) : undefined)
             .orderBy(orderBy)
             .limit(filters.limit ?? 50)
             .offset(filters.offset ?? 0);
@@ -389,10 +397,12 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         if (filters.hasExamples === true) {
             const result = learnables.filter((learnable) => learnable.examples.length > 0);
             logQueryTiming("listLearnables", startedAt);
+
             return result;
         }
 
         logQueryTiming("listLearnables", startedAt);
+
         return learnables;
     }
 
@@ -401,10 +411,12 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         const [row] = await this.database.select().from(learningLearnables).where(eq(learningLearnables.id, id)).limit(1);
         if (!row) {
             logQueryTiming("findLearnableById", startedAt);
+
             return undefined;
         }
         const [learnable] = await this.hydrateLearnables([row]);
         logQueryTiming("findLearnableById", startedAt);
+
         return learnable;
     }
 
@@ -424,6 +436,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             return undefined;
         }
         const [learnable] = await this.hydrateLearnables([row]);
+
         return learnable;
     }
 
@@ -432,6 +445,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .select()
             .from(learningLearnables)
             .where(and(eq(learningLearnables.languageId, input.languageId), eq(learningLearnables.normalizedText, input.normalizedText)));
+
         return this.hydrateLearnables(rows);
     }
 
@@ -488,6 +502,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         if (!learnable) {
             throw new Error(`Learnable hydration failed after create: ${row.id}`);
         }
+
         return learnable;
     }
 
@@ -532,6 +547,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         if (!learnable) {
             throw new Error(`Learnable hydration failed after update: ${row.id}`);
         }
+
         return learnable;
     }
 
@@ -553,6 +569,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         if (!learnable) {
             throw new Error(`Learnable hydration failed after touch: ${row.id}`);
         }
+
         return learnable;
     }
 
@@ -577,6 +594,46 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .orderBy(desc(learningRelatedLearnables.confidence));
 
         return rows.map((row) => this.converter.convertRelatedLearnable(row.relation));
+    }
+
+    public async upsertRelatedLearnables(
+        relations: readonly {
+            readonly fromLearnableId: string;
+            readonly toLearnableId: string;
+            readonly relationType: string;
+            readonly confidence: number;
+        }[],
+    ) {
+        if (relations.length === 0) {
+            return;
+        }
+
+        for (const relation of relations) {
+            const id = createRelationRowId(relation.fromLearnableId, relation.toLearnableId, relation.relationType);
+            const [existing] = await this.database
+                .select()
+                .from(learningRelatedLearnables)
+                .where(eq(learningRelatedLearnables.id, id))
+                .limit(1);
+
+            if (existing) {
+                await this.database
+                    .update(learningRelatedLearnables)
+                    .set({
+                        confidence: Math.max(existing.confidence, relation.confidence),
+                    })
+                    .where(eq(learningRelatedLearnables.id, id));
+                continue;
+            }
+
+            await this.database.insert(learningRelatedLearnables).values({
+                id,
+                fromLearnableId: relation.fromLearnableId,
+                toLearnableId: relation.toLearnableId,
+                relationType: relation.relationType as typeof learningRelatedLearnables.$inferInsert.relationType,
+                confidence: relation.confidence,
+            });
+        }
     }
 
     public async createOccurrence(input: {
@@ -615,6 +672,19 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         return rows.map((row) => this.converter.convertOccurrence(row));
     }
 
+    public async listOccurrencesForLanguage(languageId: string) {
+        const rows = await this.database
+            .select({
+                occurrence: learningOccurrences,
+            })
+            .from(learningOccurrences)
+            .innerJoin(learningSentenceWorkspaces, eq(learningOccurrences.workspaceId, learningSentenceWorkspaces.id))
+            .where(eq(learningSentenceWorkspaces.languageId, languageId))
+            .orderBy(desc(learningOccurrences.createdAt));
+
+        return rows.map((row) => this.converter.convertOccurrence(row.occurrence));
+    }
+
     public async findLexicalMatches(input: {
         readonly languageCode: string;
         readonly type: typeof learningLearnables.$inferSelect.type;
@@ -646,12 +716,13 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         const language = await this.findLanguageByCode(input.languageCode);
         if (!language) {
             logQueryTiming("findLexicalMatchesBatch", startedAt);
+
             return {};
         }
 
         const normalizedByItemId = new Map(input.items.map((item) => [item.workspaceItemId, normalizeQuery(item.query)] as const));
-        const normalizedValues = Array.from(new Set(Array.from(normalizedByItemId.values())));
-        const requestedTypes = Array.from(new Set(input.items.map((item) => item.type)));
+        const normalizedValues = [...new Set(normalizedByItemId.values())];
+        const requestedTypes = [...new Set(input.items.map((item) => item.type))];
 
         const exactRows = await this.database
             .select()
@@ -675,7 +746,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
                 ),
             );
 
-        const aliasLearnableIds = Array.from(new Set(aliasRows.map((row) => row.learnableId)));
+        const aliasLearnableIds = [...new Set(aliasRows.map((row) => row.learnableId))];
         const aliasLearnableRows =
             aliasLearnableIds.length > 0
                 ? await this.database
@@ -721,9 +792,9 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             }),
         );
 
-        const allRows = [...exactRows, ...aliasLearnableRows, ...Array.from(fuzzyRowsByItemId.values()).flat()];
+        const allRows = [...exactRows, ...aliasLearnableRows, ...[...fuzzyRowsByItemId.values()].flat()];
         const uniqueRowsById = new Map(allRows.map((row) => [row.id, row]));
-        const hydratedLearnables = await this.hydrateLearnables(Array.from(uniqueRowsById.values()));
+        const hydratedLearnables = await this.hydrateLearnables([...uniqueRowsById.values()]);
         const learnableById = new Map(hydratedLearnables.map((learnable) => [String(learnable.id), learnable] as const));
 
         const aliasIdsByNormalized = new Map<string, string[]>();
@@ -773,6 +844,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         }
 
         logQueryTiming("findLexicalMatchesBatch", startedAt);
+
         return result;
     }
 
@@ -782,6 +854,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
 
         if (!language) {
             logQueryTiming("findSemanticMatches", startedAt);
+
             return [];
         }
 
@@ -809,6 +882,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             reason: "semantic" as const,
         }));
         logQueryTiming("findSemanticMatches", startedAt);
+
         return result;
     }
 

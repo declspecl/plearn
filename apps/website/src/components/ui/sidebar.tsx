@@ -108,6 +108,7 @@ function SidebarProvider({
             }
 
             if (globalThis.window !== undefined) {
+                // eslint-disable-next-line unicorn/no-document-cookie -- persist sidebar open state for SSR layout
                 document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
             }
         },
@@ -281,7 +282,7 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-    const { toggleSidebar, openMobile } = useSidebar();
+    const { toggleSidebar } = useSidebar();
 
     return (
         <Button

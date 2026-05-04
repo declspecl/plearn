@@ -24,10 +24,10 @@ const ERROR_CORRECTION_LEVELS = {
 function buildQrPathData(qrCode: ReturnType<typeof QrCode.encodeText>, marginSize: number): string {
     const commands: Array<string> = [];
 
-    for (let y = 0; y < qrCode.size; y += 1) {
+    for (const y of Array.from({ length: qrCode.size }, (_, index) => index)) {
         let runStart = -1;
 
-        for (let x = 0; x <= qrCode.size; x += 1) {
+        for (const x of Array.from({ length: qrCode.size + 1 }, (_, index) => index)) {
             const isDark = x < qrCode.size && qrCode.getModule(x, y);
 
             if (isDark) {

@@ -33,6 +33,11 @@ function logPerf(message: string, metadata: Readonly<Record<string, unknown>>) {
     console.info(`[PERF] ${message}`, metadata);
 }
 
+/** Snapshot a plain object as JSON-serializable `Record` for persistence (no `as unknown`). */
+function jsonCloneAsRecord(value: object): Readonly<Record<string, unknown>> {
+    return structuredClone(value) as Readonly<Record<string, unknown>>;
+}
+
 function buildSearchDocument(proposal: {
     readonly canonicalText: string;
     readonly translation: string;
@@ -54,8 +59,13 @@ function buildSearchDocument(proposal: {
 }
 
 function extractPatternTemplate(proposedJson: Readonly<Record<string, unknown>>): string | undefined {
-    if (typeof proposedJson.formula === "string") return proposedJson.formula;
-    if (typeof proposedJson.patternTemplate === "string") return proposedJson.patternTemplate;
+    if (typeof proposedJson.formula === "string") {
+        return proposedJson.formula;
+    }
+    if (typeof proposedJson.patternTemplate === "string") {
+        return proposedJson.patternTemplate;
+    }
+
     return undefined;
 }
 
@@ -81,6 +91,42 @@ interface FlattenedItem {
     readonly proposedTranslation: string;
     readonly proposedNotes: string;
     readonly proposedJson: Readonly<Record<string, unknown>>;
+}
+
+function clampConfidence(value: number) {
+    return Math.max(0, Math.min(1, value));
+}
+
+function normalizePatternKey(value?: string): string | undefined {
+    if (!value?.trim()) {
+        return undefined;
+    }
+
+    return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
+}
+
+function cosineSimilarity(left: readonly number[], right: readonly number[]) {
+    if (left.length === 0 || left.length !== right.length) {
+        return 0;
+    }
+
+    let dot = 0;
+    let leftNorm = 0;
+    let rightNorm = 0;
+
+    for (let index = 0; index < left.length; index += 1) {
+        const leftValue = left[index] ?? 0;
+        const rightValue = right[index] ?? 0;
+        dot += leftValue * rightValue;
+        leftNorm += leftValue * leftValue;
+        rightNorm += rightValue * rightValue;
+    }
+
+    if (leftNorm === 0 || rightNorm === 0) {
+        return 0;
+    }
+
+    return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
 }
 
 export interface LearnableGraphNode {
@@ -111,7 +157,7 @@ function flattenAnalysis(analysis: SentenceAnalysis): readonly FlattenedItem[] {
         proposedText: c.text,
         proposedTranslation: c.meaning,
         proposedNotes: c.formula + (c.notes ? `\n${c.notes}` : ""),
-        proposedJson: c as unknown as Readonly<Record<string, unknown>>,
+        proposedJson: jsonCloneAsRecord(c),
     }));
 
     const componentTexts = new Set(analysis.components.map((c) => normalizeLearnableText(c.text)));
@@ -123,7 +169,7 @@ function flattenAnalysis(analysis: SentenceAnalysis): readonly FlattenedItem[] {
             proposedText: w.text,
             proposedTranslation: w.meaning,
             proposedNotes: w.notes ?? "",
-            proposedJson: w as unknown as Readonly<Record<string, unknown>>,
+            proposedJson: jsonCloneAsRecord(w),
         }));
 
     return [...componentItems, ...wordItems];
@@ -180,7 +226,7 @@ export class SentenceAnalysisService {
                 analysisModelProvider: analyzed.modelProvider,
                 analysisModelId: analyzed.modelId,
                 analysisPromptVersion: analyzed.promptVersion,
-                rawAnalysisJson: analyzed.analysis as unknown as Readonly<Record<string, unknown>>,
+                rawAnalysisJson: jsonCloneAsRecord(analyzed.analysis),
                 summary: `${analyzed.analysis.sentence.text} — ${analyzed.analysis.sentence.meaning}`,
                 items,
             });
@@ -205,7 +251,7 @@ export class SentenceAnalysisService {
         }
     }
 
-    public async getWorkspace(workspaceId: SentenceWorkspaceId, _languageCode: string): Promise<SentenceWorkspace | undefined> {
+    public async getWorkspace(workspaceId: SentenceWorkspaceId): Promise<SentenceWorkspace | undefined> {
         const workspace = await this.workspaces.findWorkspaceById(workspaceId);
 
         if (!workspace) {
@@ -303,6 +349,7 @@ export class WorkspaceReviewService {
             ),
         );
         const refreshed = await this.workspaces.findWorkspaceById(updated.id);
+
         return refreshed ?? updated;
     }
 
@@ -333,6 +380,7 @@ export class WorkspaceReviewService {
             let learnable: Learnable;
 
             if (current) {
+                const mergedAlias = normalizedText === current.normalizedText ? "" : item.proposedText;
                 learnable = await this.learnables.updateLearnable(current.id, {
                     translation: current.translation || item.proposedTranslation,
                     partOfSpeech:
@@ -344,14 +392,10 @@ export class WorkspaceReviewService {
                         translation: item.proposedTranslation,
                         usageNotes: item.proposedNotes,
                         patternTemplate: extractPatternTemplate(item.proposedJson),
-                        aliases: Array.from(
-                            new Set([...current.aliases, normalizedText !== current.normalizedText ? item.proposedText : ""]),
-                        ).filter(Boolean),
+                        aliases: [...new Set([...current.aliases, mergedAlias])].filter(Boolean),
                         examples: exampleHints,
                     }),
-                    aliases: Array.from(
-                        new Set([...current.aliases, normalizedText !== current.normalizedText ? item.proposedText : ""]),
-                    ).filter(Boolean),
+                    aliases: [...new Set([...current.aliases, mergedAlias])].filter(Boolean),
                     examples: [
                         ...current.examples.map((example) => ({
                             exampleText: example.exampleText,
@@ -426,6 +470,7 @@ export class WorkspaceReviewService {
         }
 
         const savedWorkspace = await this.workspaces.markSaved(workspace.id, toWorkspaceReviewJson(workspace));
+        await this.upsertDerivedRelations(workspace, savedLearnables);
 
         return {
             workspace: savedWorkspace,
@@ -462,6 +507,117 @@ export class WorkspaceReviewService {
         }
 
         return undefined;
+    }
+
+    private async upsertDerivedRelations(workspace: SentenceWorkspace, savedLearnables: readonly Learnable[]) {
+        const learnableByNormalizedText = new Map(savedLearnables.map((learnable) => [learnable.normalizedText, learnable]));
+        const relations = new Map<
+            string,
+            {
+                readonly fromLearnableId: LearnableId;
+                readonly toLearnableId: LearnableId;
+                readonly relationType: RelatedLearnableType;
+                confidence: number;
+            }
+        >();
+
+        const addRelation = (
+            leftId: LearnableId,
+            rightId: LearnableId,
+            relationType: RelatedLearnableType,
+            confidence: number,
+            bidirectional = true,
+        ) => {
+            if (leftId === rightId) {
+                return;
+            }
+
+            const upsert = (fromLearnableId: LearnableId, toLearnableId: LearnableId) => {
+                const key = `${relationType}:${fromLearnableId}:${toLearnableId}`;
+                const existing = relations.get(key);
+
+                if (existing) {
+                    existing.confidence = Math.max(existing.confidence, confidence);
+                    return;
+                }
+
+                relations.set(key, {
+                    fromLearnableId,
+                    toLearnableId,
+                    relationType,
+                    confidence,
+                });
+            };
+
+            upsert(leftId, rightId);
+            if (bidirectional) {
+                upsert(rightId, leftId);
+            }
+        };
+
+        for (let index = 0; index < savedLearnables.length; index += 1) {
+            for (let innerIndex = index + 1; innerIndex < savedLearnables.length; innerIndex += 1) {
+                addRelation(savedLearnables[index]!.id, savedLearnables[innerIndex]!.id, "related_phrase", 0.62);
+            }
+        }
+
+        const groupedByPattern = new Map<string, Learnable[]>();
+        for (const learnable of savedLearnables) {
+            const patternKey = normalizePatternKey(learnable.patternTemplate);
+            if (!patternKey) {
+                continue;
+            }
+
+            const current = groupedByPattern.get(patternKey) ?? [];
+            current.push(learnable);
+            groupedByPattern.set(patternKey, current);
+        }
+
+        for (const group of groupedByPattern.values()) {
+            for (let index = 0; index < group.length; index += 1) {
+                for (let innerIndex = index + 1; innerIndex < group.length; innerIndex += 1) {
+                    addRelation(group[index]!.id, group[innerIndex]!.id, "same_pattern_family", 0.9);
+                }
+            }
+        }
+
+        const activeItems = workspace.items.filter((item) => item.reviewAction !== "reject");
+        for (const item of activeItems) {
+            if (item.proposedType !== "grammar_pattern" && item.proposedType !== "phrase") {
+                continue;
+            }
+
+            const containerText = normalizeLearnableText(item.proposedText);
+            const containerLearnable = learnableByNormalizedText.get(containerText);
+            if (!containerLearnable) {
+                continue;
+            }
+
+            for (const candidate of activeItems) {
+                if (candidate.id === item.id) {
+                    continue;
+                }
+
+                const candidateText = normalizeLearnableText(candidate.proposedText);
+                const candidateLearnable = learnableByNormalizedText.get(candidateText);
+                if (!candidateLearnable) {
+                    continue;
+                }
+
+                if (containerText.includes(candidateText)) {
+                    addRelation(containerLearnable.id, candidateLearnable.id, "related_phrase", 0.78);
+                }
+            }
+        }
+
+        await this.learnables.upsertRelatedLearnables(
+            [...relations.values()].map((relation) => ({
+                fromLearnableId: relation.fromLearnableId,
+                toLearnableId: relation.toLearnableId,
+                relationType: relation.relationType,
+                confidence: clampConfidence(relation.confidence),
+            })),
+        );
     }
 }
 
@@ -561,22 +717,156 @@ export class LearnableCatalogService {
                 }) satisfies LearnableGraphNode,
         );
         const nodeIds = new Set(nodes.map((node) => node.id));
-        const edges = await this.learnables.listAllRelatedLearnables(language.id);
+        const [explicitEdges, occurrences] = await Promise.all([
+            this.learnables.listAllRelatedLearnables(language.id),
+            this.occurrences.listOccurrencesForLanguage(language.id),
+        ]);
+        const edgeMap = new Map<string, LearnableGraphEdge>();
+        const setEdge = (edge: LearnableGraphEdge) => {
+            const key = `${edge.relationType}:${edge.fromId}:${edge.toId}`;
+            const current = edgeMap.get(key);
+
+            if (!current || current.confidence < edge.confidence) {
+                edgeMap.set(key, edge);
+            }
+        };
+
+        for (const edge of explicitEdges) {
+            if (!nodeIds.has(edge.fromLearnableId) || !nodeIds.has(edge.toLearnableId)) {
+                continue;
+            }
+
+            setEdge({
+                id: edge.id,
+                fromId: edge.fromLearnableId,
+                toId: edge.toLearnableId,
+                relationType: edge.relationType,
+                confidence: edge.confidence,
+            });
+        }
+
+        const occurrenceBuckets = new Map<string, Set<LearnableId>>();
+        for (const occurrence of occurrences) {
+            if (!nodeIds.has(occurrence.learnableId)) {
+                continue;
+            }
+
+            const bucket = occurrenceBuckets.get(occurrence.workspaceId) ?? new Set<LearnableId>();
+            bucket.add(occurrence.learnableId);
+            occurrenceBuckets.set(occurrence.workspaceId, bucket);
+        }
+
+        const cooccurrenceCounts = new Map<string, { leftId: LearnableId; rightId: LearnableId; count: number }>();
+        for (const bucket of occurrenceBuckets.values()) {
+            const ids = [...bucket];
+            for (let index = 0; index < ids.length; index += 1) {
+                for (let innerIndex = index + 1; innerIndex < ids.length; innerIndex += 1) {
+                    const leftId = ids[index]!;
+                    const rightId = ids[innerIndex]!;
+                    const forwardKey = `related_phrase:${leftId}:${rightId}`;
+                    const backwardKey = `related_phrase:${rightId}:${leftId}`;
+                    const forward = cooccurrenceCounts.get(forwardKey) ?? { leftId, rightId, count: 0 };
+                    const backward = cooccurrenceCounts.get(backwardKey) ?? { leftId: rightId, rightId: leftId, count: 0 };
+                    forward.count += 1;
+                    backward.count += 1;
+                    cooccurrenceCounts.set(forwardKey, forward);
+                    cooccurrenceCounts.set(backwardKey, backward);
+                }
+            }
+        }
+
+        for (const pair of cooccurrenceCounts.values()) {
+            setEdge({
+                id: `cooccurrence:${pair.leftId}:${pair.rightId}`,
+                fromId: pair.leftId,
+                toId: pair.rightId,
+                relationType: "related_phrase",
+                confidence: clampConfidence(0.34 + pair.count * 0.18),
+            });
+        }
+
+        const patternBuckets = new Map<string, LearnableGraphNode[]>();
+        for (const learnable of learnables) {
+            const patternKey = normalizePatternKey(learnable.patternTemplate);
+            if (!patternKey || !nodeIds.has(learnable.id)) {
+                continue;
+            }
+
+            const current = patternBuckets.get(patternKey) ?? [];
+            current.push({
+                id: learnable.id,
+                type: learnable.type,
+                canonicalText: learnable.canonicalText,
+                translation: learnable.translation,
+                occurrenceCount: learnable.occurrenceCount,
+                difficulty: learnable.difficulty,
+            });
+            patternBuckets.set(patternKey, current);
+        }
+
+        for (const group of patternBuckets.values()) {
+            for (let index = 0; index < group.length; index += 1) {
+                for (let innerIndex = index + 1; innerIndex < group.length; innerIndex += 1) {
+                    const left = group[index]!;
+                    const right = group[innerIndex]!;
+                    setEdge({
+                        id: `pattern:${left.id}:${right.id}`,
+                        fromId: left.id,
+                        toId: right.id,
+                        relationType: "same_pattern_family",
+                        confidence: 0.9,
+                    });
+                    setEdge({
+                        id: `pattern:${right.id}:${left.id}`,
+                        fromId: right.id,
+                        toId: left.id,
+                        relationType: "same_pattern_family",
+                        confidence: 0.9,
+                    });
+                }
+            }
+        }
+
+        const degrees = new Map<string, number>();
+        for (const edge of edgeMap.values()) {
+            degrees.set(edge.fromId, (degrees.get(edge.fromId) ?? 0) + 1);
+            degrees.set(edge.toId, (degrees.get(edge.toId) ?? 0) + 1);
+        }
+
+        const learnablesById = new Map(learnables.map((learnable) => [learnable.id, learnable]));
+        for (const learnable of learnables) {
+            if ((degrees.get(learnable.id) ?? 0) > 0 || !learnable.embedding?.length) {
+                continue;
+            }
+
+            const semanticNeighbors = learnables
+                .filter((candidate) => candidate.id !== learnable.id && candidate.embedding?.length === learnable.embedding?.length)
+                .map((candidate) => ({
+                    id: candidate.id,
+                    similarity: cosineSimilarity(learnable.embedding ?? [], candidate.embedding ?? []),
+                }))
+                .filter((candidate) => candidate.similarity >= 0.72)
+                .sort((left, right) => right.similarity - left.similarity)
+                .slice(0, 2);
+
+            for (const neighbor of semanticNeighbors) {
+                if (!learnablesById.has(neighbor.id)) {
+                    continue;
+                }
+
+                setEdge({
+                    id: `semantic:${learnable.id}:${neighbor.id}`,
+                    fromId: learnable.id,
+                    toId: neighbor.id,
+                    relationType: "similar_meaning",
+                    confidence: clampConfidence(neighbor.similarity),
+                });
+            }
+        }
 
         return {
             nodes,
-            edges: edges
-                .filter((edge) => nodeIds.has(edge.fromLearnableId) && nodeIds.has(edge.toLearnableId))
-                .map(
-                    (edge) =>
-                        ({
-                            id: edge.id,
-                            fromId: edge.fromLearnableId,
-                            toId: edge.toLearnableId,
-                            relationType: edge.relationType,
-                            confidence: edge.confidence,
-                        }) satisfies LearnableGraphEdge,
-                ),
+            edges: [...edgeMap.values()],
         };
     }
 }

@@ -113,7 +113,7 @@ export default function ThemePage() {
                         <SheetContent>
                             <SheetHeader>
                                 <SheetTitle>Edit profile</SheetTitle>
-                                <SheetDescription>Make changes to your profile here. Click save when you're done.</SheetDescription>
+                                <SheetDescription>Make changes to your profile here. Click save when you&apos;re done.</SheetDescription>
                             </SheetHeader>
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
@@ -359,12 +359,12 @@ export default function ThemePage() {
                         <h3 className="text-lg font-medium">Scroll Area</h3>
                         <ScrollArea className="h-48 w-full rounded-md border p-4">
                             Jokester began sneaking into the castle in the middle of the night and leaving jokes all over the place: under
-                            the king's pillow, in his soup, even in the royal toilet. The king was furious, but he couldn't seem to stop
-                            Jokester.
+                            the king&apos;s pillow, in his soup, even in the royal toilet. The king was furious, but he couldn&apos;t seem
+                            to stop Jokester.
                             <br />
                             <br />
                             And then, one day, the people of the kingdom discovered that the jokes left by Jokester were so funny that they
-                            couldn't help but laugh. And once they started laughing, they couldn't stop.
+                            couldn&apos;t help but laugh. And once they started laughing, they couldn&apos;t stop.
                             <br />
                             <br />
                             Eventually, even the king had to give in, and he allowed Jokester to become the official jester of the kingdom.
@@ -543,7 +543,7 @@ export default function ThemePage() {
                     <div className="flex items-center justify-center rounded-lg border border-dashed p-8">
                         <Empty>
                             <EmptyTitle>No results found</EmptyTitle>
-                            <EmptyDescription>Try adjusting your search or filters to find what you're looking for.</EmptyDescription>
+                            <EmptyDescription>Try adjusting your search or filters to find what you&apos;re looking for.</EmptyDescription>
                             <Button variant="outline" className="mt-4">
                                 Clear filters
                             </Button>

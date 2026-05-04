@@ -82,5 +82,6 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
     );
 
     console.info("[PERF][PAGE] vietnamese.sentences", { elapsedMs: Math.round(performance.now() - startedAt) });
+
     return view;
 }

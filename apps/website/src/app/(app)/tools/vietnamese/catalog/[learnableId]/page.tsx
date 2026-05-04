@@ -1,6 +1,7 @@
 import { LearnableBadge } from "@/components/learning/learnable-badge";
 import { getServices } from "@/lib/server/clients";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
+import { createLearnableId } from "@plearn/core/learning/model";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { performance } from "node:perf_hooks";
@@ -21,7 +22,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
     const [learnable, related, occurrences] = await Promise.all([
         caller.learning.getLearnable({ learnableId }),
         caller.learning.getRelatedLearnables({ learnableId }),
-        services.learnableCatalogService.listOccurrences(learnableId as any),
+        services.learnableCatalogService.listOccurrences(createLearnableId(learnableId)),
     ]);
 
     if (!learnable) {
@@ -126,5 +127,6 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
         learnableId,
         elapsedMs: Math.round(performance.now() - startedAt),
     });
+
     return view;
 }

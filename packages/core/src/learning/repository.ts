@@ -8,6 +8,7 @@ import type {
     Occurrence,
     RelatedLearnable,
     ReviewAction,
+    RelatedLearnableType,
     SentenceAnalysis,
     SentenceWorkspace,
     SentenceWorkspaceId,
@@ -140,6 +141,14 @@ export interface LearnableRepository {
     touchLearnable(id: LearnableId, now: Date): Promise<Learnable>;
     listRelatedLearnables(id: LearnableId): Promise<readonly RelatedLearnable[]>;
     listAllRelatedLearnables(languageId: Language["id"]): Promise<readonly RelatedLearnable[]>;
+    upsertRelatedLearnables(
+        relations: readonly {
+            readonly fromLearnableId: LearnableId;
+            readonly toLearnableId: LearnableId;
+            readonly relationType: RelatedLearnableType;
+            readonly confidence: number;
+        }[],
+    ): Promise<void>;
 }
 
 export interface OccurrenceRepository {
@@ -151,6 +160,7 @@ export interface OccurrenceRepository {
         readonly rationale?: string;
     }): Promise<Occurrence>;
     listOccurrencesForLearnable(learnableId: LearnableId): Promise<readonly Occurrence[]>;
+    listOccurrencesForLanguage(languageId: Language["id"]): Promise<readonly Occurrence[]>;
 }
 
 export interface LearningSearchRepository {

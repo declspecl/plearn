@@ -2,23 +2,9 @@ import { resolveCompositionDomains } from "./domain";
 import type { CompositionDomain, CompositionDomainList, ExpandCompositionDomains } from "./domain";
 import type { Clock } from "@plearn/core/shared/clock";
 import type { Logger } from "@plearn/core/shared/logger";
-import { createDatabaseClient } from "@plearn/db/client";
 
 export type CompositionClock = Clock;
 export type CompositionLogger = Logger;
-
-interface CompositionDomainArtifacts {
-    // Add domain-specific artifacts here
-}
-
-type UnionToIntersection<Union> = (Union extends unknown ? (input: Union) => void : never) extends (input: infer Intersection) => void
-    ? Intersection
-    : never;
-
-type MergeArtifacts<
-    Domains extends CompositionDomain,
-    Artifact extends keyof CompositionDomainArtifacts[CompositionDomain],
-> = UnionToIntersection<CompositionDomainArtifacts[Domains][Artifact]>;
 
 export interface CreateCompositionOptions<RequestedDomains extends CompositionDomainList> {
     readonly clock: Clock;
@@ -28,6 +14,7 @@ export interface CreateCompositionOptions<RequestedDomains extends CompositionDo
 }
 
 export type Composition<Domains extends CompositionDomain> = {
+    readonly clock: Clock;
     readonly capabilities: {
         readonly domains: readonly CompositionDomain[];
         readonly has: Readonly<Record<Domains, true>>;
@@ -43,7 +30,11 @@ export function createComposition<const RequestedDomains extends CompositionDoma
 ): Composition<ExpandCompositionDomains<RequestedDomains[number]>> {
     const clock = options.clock;
     const resolvedDomains = resolveCompositionDomains(options.domains);
-    const composition: any = {
+    const composition: {
+        readonly clients: object;
+        readonly repositories: object;
+        readonly services: object;
+    } = {
         clients: {},
         repositories: {},
         services: {},
@@ -63,5 +54,5 @@ export function createComposition<const RequestedDomains extends CompositionDoma
         clock,
         repositories: composition.repositories,
         services: composition.services,
-    } as any;
+    };
 }

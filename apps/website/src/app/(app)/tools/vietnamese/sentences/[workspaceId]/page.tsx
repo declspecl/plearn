@@ -62,5 +62,6 @@ export default async function SentenceWorkspaceDetailPage({ params }: SentenceWo
         workspaceId,
         elapsedMs: Math.round(performance.now() - startedAt),
     });
+
     return view;
 }

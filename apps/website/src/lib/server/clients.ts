@@ -70,5 +70,6 @@ export function getServices(): Services {
         sentenceAnalysisService: new SentenceAnalysisService(learningFacade, learningFacade, new VercelAiLearningAnalyzer()),
         workspaceReviewService: new WorkspaceReviewService(learningFacade, learningFacade, learningFacade, embedder),
     };
+
     return cachedServices;
 }

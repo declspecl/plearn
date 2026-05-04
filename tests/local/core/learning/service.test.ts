@@ -1,5 +1,11 @@
 import type { Learnable, SentenceWorkspace } from "@plearn/core/learning/model";
-import { createLanguageId, createLearnableId, createSentenceWorkspaceId, createWorkspaceItemId } from "@plearn/core/learning/model";
+import {
+    createLanguageId,
+    createLearnableId,
+    createOccurrenceId,
+    createSentenceWorkspaceId,
+    createWorkspaceItemId,
+} from "@plearn/core/learning/model";
 import type {
     LearningEmbedder,
     LearningSearchRepository,
@@ -100,7 +106,7 @@ describe("WorkspaceReviewService", () => {
         };
         const occurrences: OccurrenceRepository = {
             createOccurrence: vi.fn(async () => ({
-                id: "occurrence-1" as any,
+                id: createOccurrenceId("occurrence-1"),
                 learnableId: existingLearnable.id,
                 workspaceId: workspace.id,
                 sourceSpanText: "Xin chào",

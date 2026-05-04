@@ -193,6 +193,7 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
         if (!isActive) {
             setPhase(0);
             setElapsed(0);
+
             return;
         }
 
@@ -293,6 +294,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const router = useRouter();
     const [sourceText, setSourceText] = useState(() => {
         const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
+
         return draft ?? initialWorkspace?.sourceText ?? "";
     });
     const [workspace, setWorkspace] = useState(initialWorkspace);
@@ -329,6 +331,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         const draftItems = getLocalStorageItem<EditableItem[]>(key);
         if (!draftItems?.length) return;
         setWorkspace((current) => (current ? { ...current, items: draftItems } : current));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate from localStorage only when workspace id changes
     }, [workspace?.id]);
 
     useEffect(() => {
@@ -413,7 +416,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         if (workspace.items.some((item) => item.suggestionsStatus !== "ready")) {
             void workspaceSuggestionsQuery.refetch();
         }
-    }, [workspace?.id]);
+    }, [workspace, workspaceSuggestionsQuery]);
 
     function updateItem(id: string, patch: Partial<EditableItem>) {
         setWorkspace((current) =>

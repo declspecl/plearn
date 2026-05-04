@@ -3,7 +3,7 @@
 import { GRAPH_FORCE_CONFIG, getNodeDimensions, getTypeAnchor } from "./graph-constants";
 import type { GraphData, PositionedEdge, PositionedNode } from "./graph-types";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from "d3-force";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 interface SimNode extends PositionedNode {
     vx?: number;
@@ -23,8 +23,6 @@ interface SimLink {
 }
 
 export function useForceSimulation(data: GraphData) {
-    const [version, setVersion] = useState(0);
-
     const layout = useMemo(() => {
         if (data.nodes.length === 0) {
             return { nodes: [] as PositionedNode[], edges: [] as PositionedEdge[] };
@@ -104,12 +102,7 @@ export function useForceSimulation(data: GraphData) {
             nodes: nodes.map((node) => ({ ...node })),
             edges: positionedEdges,
         };
-    }, [data, version]);
+    }, [data]);
 
-    return {
-        ...layout,
-        reheat() {
-            setVersion((current) => current + 1);
-        },
-    };
+    return layout;
 }

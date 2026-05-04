@@ -34,3 +34,23 @@ export interface PositionedEdge extends GraphEdge {
     readonly source: PositionedNode;
     readonly target: PositionedNode;
 }
+
+export interface GraphFlowNodeData {
+    readonly node: PositionedNode;
+    readonly index: number;
+    readonly dimmed: boolean;
+    readonly hovered: boolean;
+    readonly highlighted: boolean;
+    readonly selected: boolean;
+    readonly onSelect: (node: PositionedNode) => void;
+    readonly onHoverChange: (node: PositionedNode | null) => void;
+}
+
+export interface GraphFlowEdgeData {
+    readonly sourceType: LearnableType;
+    readonly targetType: LearnableType;
+    readonly relationType: RelatedLearnableType;
+    readonly confidence: number;
+    readonly dimmed: boolean;
+    readonly highlighted: boolean;
+}

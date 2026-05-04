@@ -1,5 +1,6 @@
 import { LearnableBadge } from "@/components/learning/learnable-badge";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
+import { learnableTypes, type LearnableType } from "@plearn/core/learning/model";
 import Link from "next/link";
 import { performance } from "node:perf_hooks";
 import { Badge } from "~/components/ui/badge";
@@ -19,14 +20,14 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
     const startedAt = performance.now();
     const params = await searchParams;
     const caller = await createTRPCCaller();
-    const type =
-        params.type && ["grammar_pattern", "vocabulary", "utility_word", "phrase"].includes(params.type) ? [params.type] : undefined;
+    const type: LearnableType[] | undefined =
+        params.type && (learnableTypes as readonly string[]).includes(params.type) ? [params.type as LearnableType] : undefined;
 
     const [learnables, semanticMatches] = await Promise.all([
         caller.learning.listLearnables({
             languageCode: "vi",
             query: params.q,
-            types: type as any,
+            types: type,
             sort: params.sort ?? "frequency",
             limit: 50,
         }),
@@ -34,7 +35,7 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
             ? caller.learning.semanticSearchLearnables({
                   languageCode: "vi",
                   query: params.semantic,
-                  types: type as any,
+                  types: type,
                   limit: 12,
               })
             : Promise.resolve([]),
@@ -145,5 +146,6 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
     );
 
     console.info("[PERF][PAGE] vietnamese.catalog", { elapsedMs: Math.round(performance.now() - startedAt) });
+
     return view;
 }

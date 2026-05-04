@@ -6,13 +6,14 @@ import { GraphLegend } from "./graph-legend";
 import { GraphSidebar } from "./graph-sidebar";
 import type { GraphData, GraphNode, PositionedNode } from "./graph-types";
 import { useForceSimulation } from "./use-force-simulation";
-import { useGraphViewport } from "./use-graph-viewport";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactFlowInstance } from "reactflow";
 
 export function GraphShell({ data }: { readonly data: GraphData }) {
     const [selectedNodeId, setSelectedNodeId] = useState<string>();
     const [hoveredNodeId, setHoveredNodeId] = useState<string>();
     const [searchText, setSearchText] = useState("");
+    const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
     const [activeTypes, setActiveTypes] = useState<Set<GraphNode["type"]>>(
         () => new Set(["vocabulary", "grammar_pattern", "phrase", "utility_word"]),
     );
@@ -29,17 +30,18 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
     }, [activeTypes, data.edges, data.nodes]);
 
     const layout = useForceSimulation(filteredData);
-    const viewport = useGraphViewport(layout.nodes);
     const layoutSignatureRef = useRef("");
 
     useEffect(() => {
         const signature = `${filteredData.nodes.length}:${filteredData.edges.length}`;
 
-        if (layoutSignatureRef.current !== signature) {
+        if (layoutSignatureRef.current !== signature && flowInstance) {
             layoutSignatureRef.current = signature;
-            viewport.fitAll();
+            requestAnimationFrame(() => {
+                flowInstance.fitView({ duration: 360, padding: 0.18 });
+            });
         }
-    }, [filteredData.edges.length, filteredData.nodes.length, viewport]);
+    }, [filteredData.edges.length, filteredData.nodes.length, flowInstance]);
 
     useEffect(() => {
         if (selectedNodeId && !layout.nodes.some((node) => node.id === selectedNodeId)) {
@@ -54,8 +56,9 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
             }
         };
 
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
+        globalThis.addEventListener("keydown", onKeyDown);
+
+        return () => globalThis.removeEventListener("keydown", onKeyDown);
     }, []);
 
     const matchedNodeIds = useMemo(() => {
@@ -80,18 +83,19 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
             return new Set<string>();
         }
 
-        return new Set(
-            layout.edges
-                .flatMap((edge) => (edge.fromId === selectedNodeId ? [edge.toId] : edge.toId === selectedNodeId ? [edge.fromId] : []))
-                .concat(selectedNodeId),
-        );
+        return new Set([
+            ...layout.edges.flatMap((edge) =>
+                edge.fromId === selectedNodeId ? [edge.toId] : edge.toId === selectedNodeId ? [edge.fromId] : [],
+            ),
+            selectedNodeId,
+        ]);
     }, [layout.edges, selectedNodeId]);
 
     const selectedNode = useMemo(() => layout.nodes.find((node) => node.id === selectedNodeId), [layout.nodes, selectedNodeId]);
 
     const handleSelectNode = (node: PositionedNode) => {
         setSelectedNodeId(node.id);
-        viewport.centerOn(node.x, node.y, 1.26);
+        flowInstance?.setCenter(node.x, node.y, { duration: 360, zoom: Math.max(flowInstance.getZoom(), 1.26) });
     };
 
     const handleToggleType = (type: GraphNode["type"]) => {
@@ -108,13 +112,6 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
                 return next;
             });
         });
-    };
-
-    const handleZoomBy = (delta: number) => {
-        viewport.setViewport((current) => ({
-            ...current,
-            zoom: Math.max(0.3, Math.min(3, current.zoom + delta)),
-        }));
     };
 
     const visibleEdgeCount = layout.edges.length;
@@ -146,11 +143,11 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
             <GraphControls
                 activeTypes={activeTypes}
                 counts={{ nodes: layout.nodes.length, edges: visibleEdgeCount }}
-                onFitAll={viewport.fitAll}
+                onFitAll={() => flowInstance?.fitView({ duration: 360, padding: 0.18 })}
                 onSearchChange={setSearchText}
                 onToggleType={handleToggleType}
-                onZoomIn={() => handleZoomBy(0.16)}
-                onZoomOut={() => handleZoomBy(-0.16)}
+                onZoomIn={() => flowInstance?.zoomIn({ duration: 180 })}
+                onZoomOut={() => flowInstance?.zoomOut({ duration: 180 })}
                 searchText={searchText}
             />
             <GraphCanvas
@@ -160,10 +157,11 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
                 hoveredNodeId={hoveredNodeId}
                 matchedNodeIds={matchedNodeIds}
                 nodes={layout.nodes}
+                onDeselect={() => setSelectedNodeId(undefined)}
                 onHoverNodeChange={(node) => setHoveredNodeId(node?.id)}
+                onInit={setFlowInstance}
                 onSelectNode={handleSelectNode}
                 selectedNodeId={selectedNodeId}
-                viewport={viewport}
             />
             <GraphLegend />
             <GraphSidebar
@@ -173,7 +171,7 @@ export function GraphShell({ data }: { readonly data: GraphData }) {
                     const node = layout.nodes.find((entry) => entry.id === nodeId);
 
                     if (node) {
-                        viewport.centerOn(node.x, node.y, 1.4);
+                        handleSelectNode(node);
                     }
                 }}
             />

@@ -11,5 +11,6 @@ const compositionDomainOrder: readonly CompositionDomain[] = [];
 /** Resolves transitive domain dependencies and returns a deterministic domain order. */
 export function resolveCompositionDomains(domains: readonly CompositionDomain[]): readonly CompositionDomain[] {
     const resolvedDomains = new Set<CompositionDomain>(domains);
+
     return compositionDomainOrder.filter((domain) => resolvedDomains.has(domain));
 }

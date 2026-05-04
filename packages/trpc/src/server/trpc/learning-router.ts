@@ -34,7 +34,7 @@ export const learningRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            return ctx.services.sentenceAnalysisService.getWorkspace(input.workspaceId, input.languageCode);
+            return ctx.services.sentenceAnalysisService.getWorkspace(input.workspaceId);
         }),
     getWorkspaceSuggestions: protectedProcedure
         .input(

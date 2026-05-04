@@ -9,13 +9,23 @@
         "BETTER_AUTH_API_PATH",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
+        "PLEARN_OWNER_EMAIL",
+        "PLEARN_OWNER_NAME",
+        "PLEARN_OWNER_PASSWORD",
         "NEXT_PUBLIC_API_URL",
         "INTERNAL_PAGES_ENABLED",
         "NODE_ENV",
         "VERCEL_URL",
         "PORT",
         "BASE_URL",
-        "VITE_BASE_URL"
+        "VITE_BASE_URL",
+        "NEXT_PUBLIC_BETTER_AUTH_URL",
+        "DEEPSEEK_API_KEY",
+        "OPENAI_API_KEY",
+        "LEARNING_ANALYSIS_PROVIDER",
+        "LEARNING_ANALYSIS_MODEL",
+        "LEARNING_EMBEDDING_PROVIDER",
+        "LEARNING_EMBEDDING_MODEL"
     ],
     "tasks": {
         "build": {

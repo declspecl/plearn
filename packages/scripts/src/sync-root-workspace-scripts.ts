@@ -19,6 +19,7 @@ const turboJsonPath = path.join(repositoryRoot, "turbo.json");
 
 async function readJsonFile(filePath: string): Promise<PackageJson> {
     const fileContents = await fileSystem.readFile(filePath, "utf8");
+
     return JSON.parse(fileContents) as PackageJson;
 }
 
@@ -72,7 +73,7 @@ async function main(): Promise<void> {
     const generatedRootScripts: Record<string, string> = {};
     const workspacePackageJsonPaths = await getWorkspacePackageJsonPaths();
 
-    for (const workspacePackageJsonPath of workspacePackageJsonPaths.sort()) {
+    for (const workspacePackageJsonPath of workspacePackageJsonPaths.toSorted()) {
         const workspacePackageJson = await readJsonFile(workspacePackageJsonPath);
         const workspaceScripts = workspacePackageJson.scripts ?? {};
 
@@ -82,7 +83,7 @@ async function main(): Promise<void> {
 
         const workspaceAlias = getWorkspaceAlias(workspacePackageJson.name, workspacePackageJsonPath);
 
-        for (const workspaceScriptName of Object.keys(workspaceScripts).sort()) {
+        for (const workspaceScriptName of Object.keys(workspaceScripts).toSorted()) {
             if (turboTaskNames.has(workspaceScriptName)) {
                 continue;
             }
@@ -98,7 +99,7 @@ async function main(): Promise<void> {
     }
 
     rootPackageJson.scripts = {
-        ...(rootPackageJson.scripts ?? {}),
+        ...rootPackageJson.scripts,
         ...generatedRootScripts,
     };
 

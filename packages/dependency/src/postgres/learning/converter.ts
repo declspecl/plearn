@@ -115,7 +115,7 @@ export class LearningConverter {
     public convertWorkspaceItem(row: WorkspaceItemRow, duplicateSuggestions: readonly LearnableMatch[] = []): WorkspaceItem {
         const cachedSuggestions =
             Array.isArray(row.duplicateSuggestionsJson) && row.duplicateSuggestionsJson.length > 0
-                ? (row.duplicateSuggestionsJson as unknown as readonly LearnableMatch[])
+                ? (row.duplicateSuggestionsJson as readonly LearnableMatch[])
                 : duplicateSuggestions;
 
         return {

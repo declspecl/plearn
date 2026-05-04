@@ -5,7 +5,7 @@
  * https://www.nayuki.io/page/qr-code-generator-library
  */
 
-"use strict";
+/* eslint-disable unicorn/no-array-for-each, unicorn/prefer-spread, unicorn/prefer-string-slice, unicorn/prefer-code-point, no-restricted-syntax, no-useless-escape, @typescript-eslint/no-unused-vars -- vendored upstream; kept aligned with Nayuki releases */
 
 type bit = number;
 type byte = number;

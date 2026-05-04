@@ -31,7 +31,7 @@ interface AnnotatedSpan {
 }
 
 function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly AnnotatedSpan[] {
-    const sortedItems = [...items].sort((a, b) => b.text.length - a.text.length);
+    const sortedItems = [...items].toSorted((a, b) => b.text.length - a.text.length);
     const spans: AnnotatedSpan[] = [];
     let remaining = sentence;
 
