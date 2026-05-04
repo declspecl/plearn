@@ -1,6 +1,7 @@
 "use client";
 
 import { AnnotatedSentence, ToneLegend, type WordInfo } from "./annotated-sentence";
+import { getLocalStorageItem, removeLocalStorageItem, setLocalStorageItem } from "@/lib/local-storage";
 import { api } from "@plearn/trpc/client/react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,9 @@ interface EditableItem {
     proposedJson: Record<string, unknown>;
     reviewAction: "pending" | "create_new" | "merge_existing" | "reject";
     mergeTargetLearnableId?: string;
+    suggestionsStatus: "idle" | "loading" | "ready" | "failed";
+    duplicateSuggestionsLastComputedAt?: string;
+    duplicateSuggestionsError?: string;
     readonly duplicateSuggestions: Array<{
         readonly learnable: {
             readonly id: string;
@@ -75,6 +79,22 @@ function extractSentenceData(rawAnalysisJson?: Record<string, unknown>): Sentenc
 }
 
 function DuplicateSuggestions({ item, onMerge }: { item: EditableItem; onMerge: (learnableId: string) => void }) {
+    if (item.suggestionsStatus === "loading" || item.suggestionsStatus === "idle") {
+        return (
+            <div className="border-border bg-muted text-muted-foreground rounded-2xl border border-dashed p-4 text-sm">
+                Finding catalog matches...
+            </div>
+        );
+    }
+
+    if (item.suggestionsStatus === "failed") {
+        return (
+            <div className="border-destructive/40 bg-destructive/10 text-destructive rounded-2xl border p-4 text-sm">
+                Match lookup failed. {item.duplicateSuggestionsError ?? "Please retry."}
+            </div>
+        );
+    }
+
     if (item.duplicateSuggestions.length === 0) {
         return (
             <div className="border-border bg-muted text-muted-foreground rounded-2xl border border-dashed p-4 text-sm">
@@ -158,9 +178,11 @@ function ItemCard({ item, onUpdate }: { item: EditableItem; onUpdate: (patch: Pa
 const ANALYSIS_PHASES = [
     { label: "Translating sentence", duration: 5000 },
     { label: "Extracting grammar patterns", duration: 7000 },
-    { label: "Identifying vocabulary", duration: 7000 },
-    { label: "Finding catalog matches", duration: 6000 },
+    { label: "Analysis ready", duration: 3000 },
 ] as const;
+
+const ANALYSIS_DRAFT_KEY = "plearn:analysis:draft:v1";
+const REVIEW_DRAFT_PREFIX = "plearn:workspace-review:";
 
 function AnalysisProgress({ isActive }: { isActive: boolean }) {
     const [phase, setPhase] = useState(0);
@@ -269,7 +291,10 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
 
 export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const router = useRouter();
-    const [sourceText, setSourceText] = useState(initialWorkspace?.sourceText ?? "");
+    const [sourceText, setSourceText] = useState(() => {
+        const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
+        return draft ?? initialWorkspace?.sourceText ?? "";
+    });
     const [workspace, setWorkspace] = useState(initialWorkspace);
     const [sentenceData, setSentenceData] = useState<SentenceData | undefined>(extractSentenceData(initialWorkspace?.rawAnalysisJson));
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -277,6 +302,69 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const analyzeMutation = api.learning.analyzeSentence.useMutation();
     const updateMutation = api.learning.updateWorkspaceReview.useMutation();
     const saveMutation = api.learning.saveWorkspace.useMutation();
+    const workspaceSuggestionsQuery = api.learning.getWorkspaceSuggestions.useQuery(
+        {
+            workspaceId: workspace?.id ?? "",
+            languageCode: "vi",
+        },
+        {
+            enabled: Boolean(workspace?.id),
+            refetchOnWindowFocus: false,
+            staleTime: 30_000,
+        },
+    );
+
+    useEffect(() => {
+        setLocalStorageItem(ANALYSIS_DRAFT_KEY, sourceText);
+    }, [sourceText]);
+
+    useEffect(() => {
+        if (!workspace) return;
+        setLocalStorageItem(`${REVIEW_DRAFT_PREFIX}${workspace.id}:v1`, workspace.items);
+    }, [workspace]);
+
+    useEffect(() => {
+        if (!workspace) return;
+        const key = `${REVIEW_DRAFT_PREFIX}${workspace.id}:v1`;
+        const draftItems = getLocalStorageItem<EditableItem[]>(key);
+        if (!draftItems?.length) return;
+        setWorkspace((current) => (current ? { ...current, items: draftItems } : current));
+    }, [workspace?.id]);
+
+    useEffect(() => {
+        if (!workspaceSuggestionsQuery.data) return;
+        const nextWorkspace = workspaceSuggestionsQuery.data;
+        setWorkspace((current) =>
+            current
+                ? {
+                      ...current,
+                      items: nextWorkspace.items.map((item) => ({
+                          id: item.id,
+                          proposedType: item.proposedType,
+                          proposedText: item.proposedText,
+                          proposedTranslation: item.proposedTranslation,
+                          proposedNotes: item.proposedNotes,
+                          proposedJson: item.proposedJson,
+                          reviewAction: item.reviewAction,
+                          mergeTargetLearnableId: item.mergeTargetLearnableId,
+                          suggestionsStatus: item.suggestionsStatus,
+                          duplicateSuggestionsLastComputedAt: item.duplicateSuggestionsLastComputedAt?.toString(),
+                          duplicateSuggestionsError: item.duplicateSuggestionsError,
+                          duplicateSuggestions: item.duplicateSuggestions.map((suggestion) => ({
+                              learnable: {
+                                  id: suggestion.learnable.id,
+                                  canonicalText: suggestion.learnable.canonicalText,
+                                  translation: suggestion.learnable.translation,
+                                  occurrenceCount: suggestion.learnable.occurrenceCount,
+                              },
+                              confidence: suggestion.confidence,
+                              reason: suggestion.reason,
+                          })),
+                      })),
+                  }
+                : current,
+        );
+    }, [workspaceSuggestionsQuery.data]);
 
     async function analyze() {
         const nextWorkspace = await analyzeMutation.mutateAsync({
@@ -302,6 +390,9 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                 proposedJson: item.proposedJson,
                 reviewAction: item.reviewAction,
                 mergeTargetLearnableId: item.mergeTargetLearnableId,
+                suggestionsStatus: item.suggestionsStatus,
+                duplicateSuggestionsLastComputedAt: item.duplicateSuggestionsLastComputedAt?.toString(),
+                duplicateSuggestionsError: item.duplicateSuggestionsError,
                 duplicateSuggestions: item.duplicateSuggestions.map((suggestion) => ({
                     learnable: {
                         id: suggestion.learnable.id,
@@ -316,6 +407,13 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         });
         setSaveMessage(null);
     }
+
+    useEffect(() => {
+        if (!workspace) return;
+        if (workspace.items.some((item) => item.suggestionsStatus !== "ready")) {
+            void workspaceSuggestionsQuery.refetch();
+        }
+    }, [workspace?.id]);
 
     function updateItem(id: string, patch: Partial<EditableItem>) {
         setWorkspace((current) =>
@@ -365,9 +463,10 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         });
 
         setSaveMessage(`Saved ${result.savedLearnables.length} learnables.`);
+        removeLocalStorageItem(`${REVIEW_DRAFT_PREFIX}${workspace.id}:v1`);
+        removeLocalStorageItem(ANALYSIS_DRAFT_KEY);
         startTransition(() => {
             router.push(`/tools/vietnamese/sentences/${workspace.id}`);
-            router.refresh();
         });
     }
 

@@ -1,6 +1,7 @@
 import { LearnableBadge } from "@/components/learning/learnable-badge";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
+import { performance } from "node:perf_hooks";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -15,6 +16,7 @@ interface CatalogPageProps {
 }
 
 export default async function VietnameseCatalogPage({ searchParams }: CatalogPageProps) {
+    const startedAt = performance.now();
     const params = await searchParams;
     const caller = await createTRPCCaller();
     const type =
@@ -38,7 +40,7 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
             : Promise.resolve([]),
     ]);
 
-    return (
+    const view = (
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
@@ -141,4 +143,7 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
             </section>
         </div>
     );
+
+    console.info("[PERF][PAGE] vietnamese.catalog", { elapsedMs: Math.round(performance.now() - startedAt) });
+    return view;
 }

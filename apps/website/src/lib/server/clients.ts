@@ -10,6 +10,7 @@ import {
 import { createDatabaseClient } from "@plearn/db/client";
 import { LearningConverter } from "@plearn/dependency/postgres/learning/converter";
 import { LearningFacade } from "@plearn/dependency/postgres/learning/facade";
+import type { Services } from "@plearn/trpc/server";
 import "server-only";
 
 let cachedDatabaseClient: ReturnType<typeof createDatabaseClient> | undefined;
@@ -53,15 +54,21 @@ export function getRepositories() {
     return {};
 }
 
-export function getServices() {
+let cachedServices: Services | undefined;
+
+export function getServices(): Services {
+    if (cachedServices) {
+        return cachedServices;
+    }
+
     const database = getDatabaseClient();
     const learningFacade = new LearningFacade(database, new LearningConverter());
     const embedder = new VercelAiLearningEmbedder();
-
-    return {
+    cachedServices = {
         learnableCatalogService: new LearnableCatalogService(learningFacade, learningFacade, learningFacade),
         semanticSearchService: new SemanticSearchService(learningFacade, embedder),
         sentenceAnalysisService: new SentenceAnalysisService(learningFacade, learningFacade, new VercelAiLearningAnalyzer()),
-        workspaceReviewService: new WorkspaceReviewService(learningFacade, learningFacade, learningFacade, learningFacade, embedder),
+        workspaceReviewService: new WorkspaceReviewService(learningFacade, learningFacade, learningFacade, embedder),
     };
+    return cachedServices;
 }

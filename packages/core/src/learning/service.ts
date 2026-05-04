@@ -1,9 +1,11 @@
 import type {
     ComponentProposal,
+    Language,
     Learnable,
     LearnableId,
     LearnableMatch,
     LearnableType,
+    RelatedLearnableType,
     SentenceAnalysis,
     SentenceWorkspace,
     SentenceWorkspaceId,
@@ -21,9 +23,14 @@ import type {
     SemanticSearchInput,
     UpdateWorkspaceReviewInput,
 } from "./repository";
+import { performance } from "node:perf_hooks";
 
 function normalizeLearnableText(value: string): string {
     return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
+}
+
+function logPerf(message: string, metadata: Readonly<Record<string, unknown>>) {
+    console.info(`[PERF] ${message}`, metadata);
 }
 
 function buildSearchDocument(proposal: {
@@ -76,6 +83,28 @@ interface FlattenedItem {
     readonly proposedJson: Readonly<Record<string, unknown>>;
 }
 
+export interface LearnableGraphNode {
+    readonly id: LearnableId;
+    readonly type: LearnableType;
+    readonly canonicalText: string;
+    readonly translation: string;
+    readonly occurrenceCount: number;
+    readonly difficulty?: number;
+}
+
+export interface LearnableGraphEdge {
+    readonly id: string;
+    readonly fromId: LearnableId;
+    readonly toId: LearnableId;
+    readonly relationType: RelatedLearnableType;
+    readonly confidence: number;
+}
+
+export interface LearnableGraph {
+    readonly nodes: readonly LearnableGraphNode[];
+    readonly edges: readonly LearnableGraphEdge[];
+}
+
 function flattenAnalysis(analysis: SentenceAnalysis): readonly FlattenedItem[] {
     const componentItems: FlattenedItem[] = analysis.components.map((c: ComponentProposal) => ({
         proposedType: c.learnableType,
@@ -112,17 +141,30 @@ export class SentenceAnalysisService {
         readonly sourceText: string;
         readonly createdByUserId: string;
     }): Promise<SentenceWorkspace> {
+        const startedAt = performance.now();
+        const createWorkspaceStartedAt = performance.now();
         const workspace = await this.workspaces.createWorkspace({
             languageCode: input.languageCode,
             sourceText: input.sourceText,
             sourceLanguageCode: "en",
             createdByUserId: input.createdByUserId,
         });
+        logPerf("analysis.createWorkspace", {
+            workspaceId: workspace.id,
+            elapsedMs: Math.round(performance.now() - createWorkspaceStartedAt),
+        });
 
         try {
+            const aiStartedAt = performance.now();
             const analyzed = await this.analyzer.analyzeSentence({
                 languageCode: input.languageCode,
                 sourceText: input.sourceText,
+            });
+            logPerf("analysis.ai.generateObject", {
+                workspaceId: workspace.id,
+                provider: analyzed.modelProvider,
+                modelId: analyzed.modelId,
+                elapsedMs: Math.round(performance.now() - aiStartedAt),
             });
 
             const flattened = flattenAnalysis(analyzed.analysis);
@@ -131,6 +173,7 @@ export class SentenceAnalysisService {
                 position: index,
             }));
 
+            const recordAnalysisStartedAt = performance.now();
             const saved = await this.workspaces.recordAnalysis({
                 workspaceId: workspace.id,
                 status: "analyzed",
@@ -141,37 +184,81 @@ export class SentenceAnalysisService {
                 summary: `${analyzed.analysis.sentence.text} — ${analyzed.analysis.sentence.meaning}`,
                 items,
             });
+            logPerf("analysis.recordAnalysis", {
+                workspaceId: workspace.id,
+                itemCount: items.length,
+                elapsedMs: Math.round(performance.now() - recordAnalysisStartedAt),
+            });
 
-            return this.attachSuggestions(saved, input.languageCode);
+            logPerf("analysis.total", {
+                workspaceId: workspace.id,
+                itemCount: items.length,
+                provider: analyzed.modelProvider,
+                modelId: analyzed.modelId,
+                elapsedMs: Math.round(performance.now() - startedAt),
+            });
+
+            return saved;
         } catch (error) {
             await this.workspaces.markFailed(workspace.id, error instanceof Error ? error.message : String(error));
             throw error;
         }
     }
 
-    public async getWorkspace(workspaceId: SentenceWorkspaceId, languageCode: string): Promise<SentenceWorkspace | undefined> {
+    public async getWorkspace(workspaceId: SentenceWorkspaceId, _languageCode: string): Promise<SentenceWorkspace | undefined> {
         const workspace = await this.workspaces.findWorkspaceById(workspaceId);
 
         if (!workspace) {
             return undefined;
         }
 
-        return this.attachSuggestions(workspace, languageCode);
+        return workspace;
     }
 
-    private async attachSuggestions(workspace: SentenceWorkspace, languageCode: string): Promise<SentenceWorkspace> {
+    public async computeWorkspaceSuggestions(
+        workspaceId: SentenceWorkspaceId,
+        languageCode: string,
+    ): Promise<SentenceWorkspace | undefined> {
+        const startedAt = performance.now();
+        const workspace = await this.workspaces.findWorkspaceById(workspaceId);
+        if (!workspace) {
+            return undefined;
+        }
+
+        if (workspace.items.every((item) => item.suggestionsStatus === "ready")) {
+            return workspace;
+        }
+
+        const batchSuggestions = await this.search.findLexicalMatchesBatch({
+            languageCode,
+            items: workspace.items.map((item) => ({
+                workspaceItemId: item.id,
+                type: item.proposedType,
+                query: item.proposedText,
+                limit: 3,
+            })),
+        });
+
         const items = await Promise.all(
             workspace.items.map(async (item) => {
-                const suggestions = await this.search.findLexicalMatches({
-                    languageCode,
-                    type: item.proposedType,
-                    query: item.proposedText,
-                    limit: 3,
+                await this.workspaces.setWorkspaceItemSuggestionStatus({
+                    workspaceItemId: item.id,
+                    status: "loading",
+                });
+                const suggestions = batchSuggestions[item.id] ?? [];
+
+                await this.workspaces.setWorkspaceItemSuggestions({
+                    workspaceItemId: item.id,
+                    duplicateSuggestions: suggestions,
+                    status: "ready",
                 });
 
                 return {
                     ...item,
                     duplicateSuggestions: suggestions,
+                    suggestionsStatus: "ready" as const,
+                    duplicateSuggestionsError: undefined,
+                    duplicateSuggestionsLastComputedAt: new Date(),
                     mergeTargetLearnableId:
                         item.mergeTargetLearnableId ?? suggestions.find((suggestion) => suggestion.confidence >= 0.85)?.learnable.id,
                     reviewAction:
@@ -183,6 +270,12 @@ export class SentenceAnalysisService {
                 } satisfies WorkspaceItem;
             }),
         );
+
+        logPerf("analysis.attachSuggestions", {
+            workspaceId,
+            itemCount: items.length,
+            elapsedMs: Math.round(performance.now() - startedAt),
+        });
 
         return {
             ...workspace,
@@ -196,28 +289,21 @@ export class WorkspaceReviewService {
         private readonly workspaces: SentenceWorkspaceRepository,
         private readonly learnables: LearnableRepository,
         private readonly occurrences: OccurrenceRepository,
-        private readonly search: LearningSearchRepository,
         private readonly embedder: LearningEmbedder,
     ) {}
 
     public async updateWorkspaceReview(input: UpdateWorkspaceReviewInput & { readonly languageCode: string }): Promise<SentenceWorkspace> {
         const updated = await this.workspaces.updateReview(input);
-        const items = await Promise.all(
-            updated.items.map(async (item) => ({
-                ...item,
-                duplicateSuggestions: await this.search.findLexicalMatches({
-                    languageCode: input.languageCode,
-                    type: item.proposedType,
-                    query: item.proposedText,
-                    limit: 3,
+        await Promise.all(
+            updated.items.map((item) =>
+                this.workspaces.setWorkspaceItemSuggestionStatus({
+                    workspaceItemId: item.id,
+                    status: "idle",
                 }),
-            })),
+            ),
         );
-
-        return {
-            ...updated,
-            items,
-        };
+        const refreshed = await this.workspaces.findWorkspaceById(updated.id);
+        return refreshed ?? updated;
     }
 
     public async saveWorkspace(workspaceId: SentenceWorkspaceId): Promise<{
@@ -394,8 +480,17 @@ export class LearnableCatalogService {
         return this.learnables.findLearnableById(learnableId);
     }
 
-    public listSentenceWorkspaces(createdByUserId: string, languageCode?: string): Promise<readonly SentenceWorkspace[]> {
-        return this.workspaces.listWorkspaces(createdByUserId, languageCode);
+    public listSentenceWorkspaces(
+        createdByUserId: string,
+        languageCode?: string,
+        options?: { readonly query?: string; readonly limit?: number; readonly offset?: number },
+    ): Promise<readonly SentenceWorkspace[]> {
+        return this.workspaces.listWorkspaces(createdByUserId, languageCode, {
+            includeItems: false,
+            query: options?.query,
+            limit: options?.limit ?? 200,
+            offset: options?.offset ?? 0,
+        });
     }
 
     public async getWorkspace(workspaceId: SentenceWorkspaceId): Promise<SentenceWorkspace | undefined> {
@@ -410,6 +505,23 @@ export class LearnableCatalogService {
         return this.learnables.listRelatedLearnables(learnableId);
     }
 
+    public async getLearnableGraph(
+        languageCode: string,
+        filters?: {
+            readonly types?: readonly LearnableType[];
+            readonly limit?: number;
+            readonly minOccurrenceCount?: number;
+        },
+    ): Promise<LearnableGraph> {
+        const language = await this.learnables.findLanguageByCode(languageCode);
+
+        if (!language) {
+            return { nodes: [], edges: [] };
+        }
+
+        return this.buildLearnableGraph(language, filters);
+    }
+
     public async lookupByText(languageCode: string, text: string): Promise<Learnable | null> {
         const language = await this.learnables.findLanguageByCode(languageCode);
         if (!language) return null;
@@ -419,6 +531,53 @@ export class LearnableCatalogService {
         if (matches.length > 0) return matches[0]!;
 
         return (await this.learnables.findAliasMatch({ languageId: language.id, normalizedText })) ?? null;
+    }
+
+    private async buildLearnableGraph(
+        language: Language,
+        filters?: {
+            readonly types?: readonly LearnableType[];
+            readonly limit?: number;
+            readonly minOccurrenceCount?: number;
+        },
+    ): Promise<LearnableGraph> {
+        const learnables = await this.learnables.listLearnables({
+            languageCode: language.code,
+            types: filters?.types,
+            archived: false,
+            minOccurrenceCount: filters?.minOccurrenceCount,
+            limit: Math.min(filters?.limit ?? 300, 300),
+            sort: "frequency",
+        });
+        const nodes = learnables.map(
+            (learnable) =>
+                ({
+                    id: learnable.id,
+                    type: learnable.type,
+                    canonicalText: learnable.canonicalText,
+                    translation: learnable.translation,
+                    occurrenceCount: learnable.occurrenceCount,
+                    difficulty: learnable.difficulty,
+                }) satisfies LearnableGraphNode,
+        );
+        const nodeIds = new Set(nodes.map((node) => node.id));
+        const edges = await this.learnables.listAllRelatedLearnables(language.id);
+
+        return {
+            nodes,
+            edges: edges
+                .filter((edge) => nodeIds.has(edge.fromLearnableId) && nodeIds.has(edge.toLearnableId))
+                .map(
+                    (edge) =>
+                        ({
+                            id: edge.id,
+                            fromId: edge.fromLearnableId,
+                            toId: edge.toLearnableId,
+                            relationType: edge.relationType,
+                            confidence: edge.confidence,
+                        }) satisfies LearnableGraphEdge,
+                ),
+        };
     }
 }
 

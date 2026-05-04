@@ -3,6 +3,7 @@ import { getServices } from "@/lib/server/clients";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { performance } from "node:perf_hooks";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
@@ -13,6 +14,7 @@ interface LearnableDetailPageProps {
 }
 
 export default async function LearnableDetailPage({ params }: LearnableDetailPageProps) {
+    const startedAt = performance.now();
     const { learnableId } = await params;
     const caller = await createTRPCCaller();
     const services = getServices();
@@ -26,7 +28,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
         notFound();
     }
 
-    return (
+    const view = (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
@@ -119,4 +121,10 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
             ) : null}
         </div>
     );
+
+    console.info("[PERF][PAGE] vietnamese.learnableDetail", {
+        learnableId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+    });
+    return view;
 }

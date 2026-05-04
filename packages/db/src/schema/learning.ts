@@ -4,6 +4,7 @@ import { index, integer, jsonb, pgEnum, pgTable, real, text, timestamp, uniqueIn
 export const learnableTypeEnum = pgEnum("learning_learnable_type", ["grammar_pattern", "vocabulary", "utility_word", "phrase"]);
 export const workspaceStatusEnum = pgEnum("learning_workspace_status", ["draft", "analyzed", "reviewed", "saved", "failed"]);
 export const reviewActionEnum = pgEnum("learning_review_action", ["pending", "create_new", "merge_existing", "reject"]);
+export const suggestionStatusEnum = pgEnum("learning_suggestion_status", ["idle", "loading", "ready", "failed"]);
 export const learnableExampleSourceEnum = pgEnum("learning_example_source", ["ai", "sentence_observed", "manual"]);
 export const relatedLearnableTypeEnum = pgEnum("learning_related_learnable_type", [
     "similar_meaning",
@@ -51,6 +52,7 @@ export const learningSentenceWorkspaces = pgTable(
     (table) => [
         index("learning_sentence_workspaces_language_idx").on(table.languageId),
         index("learning_sentence_workspaces_user_idx").on(table.createdByUserId),
+        index("learning_sentence_workspaces_user_language_created_at_idx").on(table.createdByUserId, table.languageId, table.createdAt),
         index("learning_sentence_workspaces_status_idx").on(table.status),
         index("learning_sentence_workspaces_created_at_idx").on(table.createdAt),
     ],
@@ -145,6 +147,7 @@ export const learningOccurrences = pgTable(
     },
     (table) => [
         index("learning_occurrences_learnable_idx").on(table.learnableId),
+        index("learning_occurrences_learnable_created_at_idx").on(table.learnableId, table.createdAt),
         index("learning_occurrences_workspace_idx").on(table.workspaceId),
     ],
 );
@@ -163,10 +166,15 @@ export const learningWorkspaceItems = pgTable(
         proposedJson: jsonb("proposed_json").notNull(),
         reviewAction: reviewActionEnum("review_action").notNull().default("pending"),
         mergeTargetLearnableId: text("merge_target_learnable_id").references(() => learningLearnables.id, { onDelete: "set null" }),
+        duplicateSuggestionsJson: jsonb("duplicate_suggestions_json"),
+        duplicateSuggestionsStatus: suggestionStatusEnum("duplicate_suggestions_status").notNull().default("idle"),
+        duplicateSuggestionsComputedAt: timestamp("duplicate_suggestions_computed_at"),
+        duplicateSuggestionsError: text("duplicate_suggestions_error"),
         position: integer("position").notNull(),
     },
     (table) => [
         index("learning_workspace_items_workspace_idx").on(table.workspaceId),
+        index("learning_workspace_items_workspace_position_idx").on(table.workspaceId, table.position),
         index("learning_workspace_items_merge_target_idx").on(table.mergeTargetLearnableId),
     ],
 );

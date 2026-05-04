@@ -1,5 +1,6 @@
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
+import { performance } from "node:perf_hooks";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
@@ -10,18 +11,17 @@ interface SentenceHistoryPageProps {
 }
 
 export default async function SentenceHistoryPage({ searchParams }: SentenceHistoryPageProps) {
+    const startedAt = performance.now();
     const params = await searchParams;
     const caller = await createTRPCCaller();
     const workspaces = await caller.learning.listSentenceWorkspaces({
         languageCode: "vi",
+        query: params.q,
+        limit: 100,
+        offset: 0,
     });
 
-    const query = params.q?.toLowerCase();
-    const filteredWorkspaces = query
-        ? workspaces.filter((w) => w.sourceText.toLowerCase().includes(query) || (w.summary && w.summary.toLowerCase().includes(query)))
-        : workspaces;
-
-    return (
+    const view = (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
@@ -56,12 +56,12 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
                 <div className="flex items-end justify-between gap-4">
                     <div>
                         <p className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Recent Workspaces</p>
-                        <p className="text-muted-foreground text-sm">{filteredWorkspaces.length} sentences matched.</p>
+                        <p className="text-muted-foreground text-sm">{workspaces.length} sentences matched.</p>
                     </div>
                 </div>
 
                 <div className="grid gap-4">
-                    {filteredWorkspaces.map((workspace) => (
+                    {workspaces.map((workspace) => (
                         <Link key={workspace.id} href={`/tools/vietnamese/sentences/${workspace.id}`}>
                             <Card className="hover:border-ring border-l-primary/30 hover:border-l-primary border-l-4 transition hover:-translate-y-0.5">
                                 <CardHeader>
@@ -71,7 +71,7 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
                                     <CardDescription className="text-base">{workspace.summary ?? workspace.status}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="text-muted-foreground font-mono text-sm">
-                                    {workspace.items.length} Extracted Components
+                                    Workspace {workspace.id.slice(0, 8)}
                                 </CardContent>
                             </Card>
                         </Link>
@@ -80,4 +80,7 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
             </section>
         </div>
     );
+
+    console.info("[PERF][PAGE] vietnamese.sentences", { elapsedMs: Math.round(performance.now() - startedAt) });
+    return view;
 }

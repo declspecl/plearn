@@ -1,6 +1,7 @@
 import { WorkspaceEditor } from "@/components/learning/workspace-editor";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import { notFound } from "next/navigation";
+import { performance } from "node:perf_hooks";
 
 interface SentenceWorkspaceDetailPageProps {
     readonly params: Promise<{
@@ -9,6 +10,7 @@ interface SentenceWorkspaceDetailPageProps {
 }
 
 export default async function SentenceWorkspaceDetailPage({ params }: SentenceWorkspaceDetailPageProps) {
+    const startedAt = performance.now();
     const { workspaceId } = await params;
     const caller = await createTRPCCaller();
     const workspace = await caller.learning.getWorkspace({
@@ -20,7 +22,7 @@ export default async function SentenceWorkspaceDetailPage({ params }: SentenceWo
         notFound();
     }
 
-    return (
+    const view = (
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
             <WorkspaceEditor
                 initialWorkspace={{
@@ -37,6 +39,9 @@ export default async function SentenceWorkspaceDetailPage({ params }: SentenceWo
                         proposedJson: item.proposedJson,
                         reviewAction: item.reviewAction,
                         mergeTargetLearnableId: item.mergeTargetLearnableId,
+                        suggestionsStatus: item.suggestionsStatus,
+                        duplicateSuggestionsLastComputedAt: item.duplicateSuggestionsLastComputedAt?.toString(),
+                        duplicateSuggestionsError: item.duplicateSuggestionsError,
                         duplicateSuggestions: item.duplicateSuggestions.map((suggestion) => ({
                             learnable: {
                                 id: suggestion.learnable.id,
@@ -52,4 +57,10 @@ export default async function SentenceWorkspaceDetailPage({ params }: SentenceWo
             />
         </div>
     );
+
+    console.info("[PERF][PAGE] vietnamese.workspaceDetail", {
+        workspaceId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+    });
+    return view;
 }

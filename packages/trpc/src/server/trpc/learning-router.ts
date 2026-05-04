@@ -36,6 +36,16 @@ export const learningRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             return ctx.services.sentenceAnalysisService.getWorkspace(input.workspaceId, input.languageCode);
         }),
+    getWorkspaceSuggestions: protectedProcedure
+        .input(
+            z.object({
+                workspaceId: z.string().transform((value) => createSentenceWorkspaceId(value)),
+                languageCode: z.string().default("vi"),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.sentenceAnalysisService.computeWorkspaceSuggestions(input.workspaceId, input.languageCode);
+        }),
     updateWorkspaceReview: protectedProcedure
         .input(
             z.object({
@@ -113,10 +123,17 @@ export const learningRouter = createTRPCRouter({
         .input(
             z.object({
                 languageCode: z.string().optional(),
+                query: z.string().optional(),
+                limit: z.number().int().positive().max(200).optional(),
+                offset: z.number().int().nonnegative().optional(),
             }),
         )
         .query(async ({ ctx, input }) => {
-            return ctx.services.learnableCatalogService.listSentenceWorkspaces(ctx.session.user.id, input.languageCode);
+            return ctx.services.learnableCatalogService.listSentenceWorkspaces(ctx.session.user.id, input.languageCode, {
+                query: input.query,
+                limit: input.limit,
+                offset: input.offset,
+            });
         }),
     getRelatedLearnables: protectedProcedure
         .input(
@@ -126,6 +143,22 @@ export const learningRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             return ctx.services.learnableCatalogService.listRelatedLearnables(input.learnableId);
+        }),
+    getLearnableGraph: protectedProcedure
+        .input(
+            z.object({
+                languageCode: z.string().min(2),
+                types: z.array(learnableTypeSchema).optional(),
+                limit: z.number().int().positive().max(300).optional(),
+                minOccurrenceCount: z.number().int().nonnegative().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.learnableCatalogService.getLearnableGraph(input.languageCode, {
+                types: input.types,
+                limit: input.limit,
+                minOccurrenceCount: input.minOccurrenceCount,
+            });
         }),
     lookupByText: protectedProcedure
         .input(

@@ -39,6 +39,8 @@ export type WorkspaceStatus = (typeof workspaceStatuses)[number];
 
 export const reviewActions = ["pending", "create_new", "merge_existing", "reject"] as const;
 export type ReviewAction = (typeof reviewActions)[number];
+export const suggestionStatuses = ["idle", "loading", "ready", "failed"] as const;
+export type SuggestionStatus = (typeof suggestionStatuses)[number];
 
 export const exampleSources = ["ai", "sentence_observed", "manual"] as const;
 export type ExampleSource = (typeof exampleSources)[number];
@@ -142,6 +144,9 @@ export interface WorkspaceItem {
     readonly mergeTargetLearnableId?: LearnableId;
     readonly position: number;
     readonly duplicateSuggestions: readonly LearnableMatch[];
+    readonly suggestionsStatus: SuggestionStatus;
+    readonly duplicateSuggestionsLastComputedAt?: Date;
+    readonly duplicateSuggestionsError?: string;
 }
 
 export interface SentenceWorkspace {

@@ -113,6 +113,11 @@ export class LearningConverter {
     }
 
     public convertWorkspaceItem(row: WorkspaceItemRow, duplicateSuggestions: readonly LearnableMatch[] = []): WorkspaceItem {
+        const cachedSuggestions =
+            Array.isArray(row.duplicateSuggestionsJson) && row.duplicateSuggestionsJson.length > 0
+                ? (row.duplicateSuggestionsJson as unknown as readonly LearnableMatch[])
+                : duplicateSuggestions;
+
         return {
             id: createWorkspaceItemId(row.id),
             workspaceId: createSentenceWorkspaceId(row.workspaceId),
@@ -124,7 +129,10 @@ export class LearningConverter {
             reviewAction: row.reviewAction,
             mergeTargetLearnableId: row.mergeTargetLearnableId ? createLearnableId(row.mergeTargetLearnableId) : undefined,
             position: row.position,
-            duplicateSuggestions,
+            duplicateSuggestions: cachedSuggestions,
+            suggestionsStatus: row.duplicateSuggestionsStatus,
+            duplicateSuggestionsLastComputedAt: row.duplicateSuggestionsComputedAt ?? undefined,
+            duplicateSuggestionsError: row.duplicateSuggestionsError ?? undefined,
         };
     }
 

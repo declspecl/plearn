@@ -24,9 +24,25 @@ import {
 } from "@plearn/db/schema";
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import { performance } from "node:perf_hooks";
 
 function toArray<T>(value: readonly T[] | undefined): T[] {
     return value ? [...value] : [];
+}
+
+function logQueryTiming(method: string, start: number) {
+    const elapsed = Math.round(performance.now() - start);
+    if (elapsed > 300) {
+        console.warn(`[PERF][DB][HIGH] ${method}`, { elapsedMs: elapsed });
+    } else if (elapsed > 100) {
+        console.warn(`[PERF][DB][SLOW] ${method}`, { elapsedMs: elapsed });
+    } else {
+        console.info(`[PERF][DB] ${method}`, { elapsedMs: elapsed });
+    }
+}
+
+function normalizeQuery(value: string): string {
+    return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 export class LearningFacade implements SentenceWorkspaceRepository, LearnableRepository, OccurrenceRepository, LearningSearchRepository {
@@ -117,6 +133,10 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
                     proposedJson: item.proposedJson,
                     reviewAction: item.reviewAction,
                     mergeTargetLearnableId: item.mergeTargetLearnableId,
+                    duplicateSuggestionsStatus: "idle",
+                    duplicateSuggestionsJson: null,
+                    duplicateSuggestionsComputedAt: null,
+                    duplicateSuggestionsError: null,
                 })
                 .where(eq(learningWorkspaceItems.id, item.id));
         }
@@ -158,6 +178,38 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .where(eq(learningSentenceWorkspaces.id, workspaceId));
     }
 
+    public async setWorkspaceItemSuggestions(input: {
+        readonly workspaceItemId: string;
+        readonly duplicateSuggestions: readonly LearnableMatch[];
+        readonly status: "idle" | "loading" | "ready" | "failed";
+        readonly error?: string;
+    }): Promise<void> {
+        await this.database
+            .update(learningWorkspaceItems)
+            .set({
+                duplicateSuggestionsJson: input.duplicateSuggestions as unknown as Record<string, unknown>,
+                duplicateSuggestionsStatus: input.status,
+                duplicateSuggestionsComputedAt: new Date(),
+                duplicateSuggestionsError: input.error ?? null,
+            })
+            .where(eq(learningWorkspaceItems.id, input.workspaceItemId));
+    }
+
+    public async setWorkspaceItemSuggestionStatus(input: {
+        readonly workspaceItemId: string;
+        readonly status: "idle" | "loading" | "ready" | "failed";
+        readonly error?: string;
+    }): Promise<void> {
+        await this.database
+            .update(learningWorkspaceItems)
+            .set({
+                duplicateSuggestionsStatus: input.status,
+                duplicateSuggestionsError: input.error ?? null,
+                duplicateSuggestionsComputedAt: input.status === "ready" || input.status === "failed" ? new Date() : null,
+            })
+            .where(eq(learningWorkspaceItems.id, input.workspaceItemId));
+    }
+
     public async markSaved(workspaceId: string, reviewedAnalysisJson: Readonly<Record<string, unknown>>) {
         const [workspaceRow] = await this.database
             .update(learningSentenceWorkspaces)
@@ -186,6 +238,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
     }
 
     public async findWorkspaceById(workspaceId: string) {
+        const startedAt = performance.now();
         const [workspaceRow] = await this.database
             .select()
             .from(learningSentenceWorkspaces)
@@ -193,6 +246,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .limit(1);
 
         if (!workspaceRow) {
+            logQueryTiming("findWorkspaceById", startedAt);
             return undefined;
         }
 
@@ -202,13 +256,20 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .where(eq(learningWorkspaceItems.workspaceId, workspaceId))
             .orderBy(asc(learningWorkspaceItems.position));
 
-        return this.converter.convertWorkspace(
+        const result = this.converter.convertWorkspace(
             workspaceRow,
             itemRows.map((item) => this.converter.convertWorkspaceItem(item)),
         );
+        logQueryTiming("findWorkspaceById", startedAt);
+        return result;
     }
 
-    public async listWorkspaces(createdByUserId: string, languageCode?: string) {
+    public async listWorkspaces(
+        createdByUserId: string,
+        languageCode?: string,
+        options?: { readonly query?: string; readonly limit?: number; readonly offset?: number; readonly includeItems?: boolean },
+    ) {
+        const startedAt = performance.now();
         const language = languageCode ? await this.findLanguageByCode(languageCode) : undefined;
         const conditions = [eq(learningSentenceWorkspaces.createdByUserId, createdByUserId)];
 
@@ -216,31 +277,49 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             conditions.push(eq(learningSentenceWorkspaces.languageId, language.id));
         }
 
+        if (options?.query?.trim()) {
+            conditions.push(
+                or(
+                    ilike(learningSentenceWorkspaces.sourceText, `%${options.query}%`),
+                    ilike(learningSentenceWorkspaces.summary, `%${options.query}%`),
+                )!,
+            );
+        }
+
         const rows = await this.database
             .select()
             .from(learningSentenceWorkspaces)
             .where(and(...conditions))
-            .orderBy(desc(learningSentenceWorkspaces.createdAt));
+            .orderBy(desc(learningSentenceWorkspaces.createdAt))
+            .limit(options?.limit ?? 50)
+            .offset(options?.offset ?? 0);
 
-        const items = rows.length
-            ? await this.database
-                  .select()
-                  .from(learningWorkspaceItems)
-                  .where(
-                      inArray(
-                          learningWorkspaceItems.workspaceId,
-                          rows.map((row) => row.id),
-                      ),
-                  )
-                  .orderBy(asc(learningWorkspaceItems.position))
-            : [];
+        const shouldIncludeItems = options?.includeItems ?? true;
+        const items =
+            shouldIncludeItems && rows.length
+                ? await this.database
+                      .select()
+                      .from(learningWorkspaceItems)
+                      .where(
+                          inArray(
+                              learningWorkspaceItems.workspaceId,
+                              rows.map((row) => row.id),
+                          ),
+                      )
+                      .orderBy(asc(learningWorkspaceItems.position))
+                : [];
 
-        return rows.map((row) =>
+        const result = rows.map((row) =>
             this.converter.convertWorkspace(
                 row,
-                items.filter((item) => item.workspaceId === row.id).map((item) => this.converter.convertWorkspaceItem(item)),
+                shouldIncludeItems
+                    ? items.filter((item) => item.workspaceId === row.id).map((item) => this.converter.convertWorkspaceItem(item))
+                    : [],
             ),
         );
+
+        logQueryTiming("listWorkspaces", startedAt);
+        return result;
     }
 
     public async findLanguageByCode(code: string) {
@@ -249,6 +328,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
     }
 
     public async listLearnables(filters: LearnableListFilters) {
+        const startedAt = performance.now();
         const language = filters.languageCode ? await this.findLanguageByCode(filters.languageCode) : undefined;
         const conditions = [];
 
@@ -307,18 +387,24 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         const learnables = await this.hydrateLearnables(rows);
 
         if (filters.hasExamples === true) {
-            return learnables.filter((learnable) => learnable.examples.length > 0);
+            const result = learnables.filter((learnable) => learnable.examples.length > 0);
+            logQueryTiming("listLearnables", startedAt);
+            return result;
         }
 
+        logQueryTiming("listLearnables", startedAt);
         return learnables;
     }
 
     public async findLearnableById(id: string) {
+        const startedAt = performance.now();
         const [row] = await this.database.select().from(learningLearnables).where(eq(learningLearnables.id, id)).limit(1);
         if (!row) {
+            logQueryTiming("findLearnableById", startedAt);
             return undefined;
         }
         const [learnable] = await this.hydrateLearnables([row]);
+        logQueryTiming("findLearnableById", startedAt);
         return learnable;
     }
 
@@ -480,6 +566,19 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         return rows.map((row) => this.converter.convertRelatedLearnable(row));
     }
 
+    public async listAllRelatedLearnables(languageId: string) {
+        const rows = await this.database
+            .select({
+                relation: learningRelatedLearnables,
+            })
+            .from(learningRelatedLearnables)
+            .innerJoin(learningLearnables, eq(learningRelatedLearnables.fromLearnableId, learningLearnables.id))
+            .where(eq(learningLearnables.languageId, languageId))
+            .orderBy(desc(learningRelatedLearnables.confidence));
+
+        return rows.map((row) => this.converter.convertRelatedLearnable(row.relation));
+    }
+
     public async createOccurrence(input: {
         readonly learnableId: string;
         readonly workspaceId: string;
@@ -522,42 +621,167 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         readonly query: string;
         readonly limit?: number;
     }): Promise<readonly LearnableMatch[]> {
-        const language = await this.findLanguageByCode(input.languageCode);
+        const result = await this.findLexicalMatchesBatch({
+            languageCode: input.languageCode,
+            items: [{ workspaceItemId: "single-item", type: input.type, query: input.query, limit: input.limit }],
+        });
 
-        if (!language) {
-            return [];
+        return result["single-item"] ?? [];
+    }
+
+    public async findLexicalMatchesBatch(input: {
+        readonly languageCode: string;
+        readonly items: readonly {
+            readonly workspaceItemId: string;
+            readonly type: typeof learningLearnables.$inferSelect.type;
+            readonly query: string;
+            readonly limit?: number;
+        }[];
+    }): Promise<Readonly<Record<string, readonly LearnableMatch[]>>> {
+        const startedAt = performance.now();
+        if (input.items.length === 0) {
+            return {};
         }
 
-        const rows = await this.database
+        const language = await this.findLanguageByCode(input.languageCode);
+        if (!language) {
+            logQueryTiming("findLexicalMatchesBatch", startedAt);
+            return {};
+        }
+
+        const normalizedByItemId = new Map(input.items.map((item) => [item.workspaceItemId, normalizeQuery(item.query)] as const));
+        const normalizedValues = Array.from(new Set(Array.from(normalizedByItemId.values())));
+        const requestedTypes = Array.from(new Set(input.items.map((item) => item.type)));
+
+        const exactRows = await this.database
             .select()
             .from(learningLearnables)
             .where(
                 and(
                     eq(learningLearnables.languageId, language.id),
-                    eq(learningLearnables.type, input.type),
-                    or(
-                        ilike(learningLearnables.canonicalText, `%${input.query}%`),
-                        ilike(learningLearnables.translation, `%${input.query}%`),
-                        ilike(learningLearnables.searchDocument, `%${input.query}%`),
-                    ),
+                    inArray(learningLearnables.type, requestedTypes),
+                    inArray(learningLearnables.normalizedText, normalizedValues),
                 ),
             )
-            .orderBy(desc(learningLearnables.occurrenceCount))
-            .limit(input.limit ?? 5);
+            .orderBy(desc(learningLearnables.occurrenceCount));
 
-        const learnables = await this.hydrateLearnables(rows);
+        const aliasRows = await this.database
+            .select()
+            .from(learningLearnableAliases)
+            .where(
+                and(
+                    eq(learningLearnableAliases.languageId, language.id),
+                    inArray(learningLearnableAliases.normalizedAliasText, normalizedValues),
+                ),
+            );
 
-        return learnables.map((learnable) => ({
-            learnable,
-            confidence: learnable.normalizedText === input.query.trim().toLowerCase() ? 1 : 0.74,
-            reason: learnable.normalizedText === input.query.trim().toLowerCase() ? "exact" : "lexical",
-        }));
+        const aliasLearnableIds = Array.from(new Set(aliasRows.map((row) => row.learnableId)));
+        const aliasLearnableRows =
+            aliasLearnableIds.length > 0
+                ? await this.database
+                      .select()
+                      .from(learningLearnables)
+                      .where(
+                          and(
+                              eq(learningLearnables.languageId, language.id),
+                              inArray(learningLearnables.type, requestedTypes),
+                              inArray(learningLearnables.id, aliasLearnableIds),
+                          ),
+                      )
+                      .orderBy(desc(learningLearnables.occurrenceCount))
+                : [];
+
+        const fuzzyRowsByItemId = new Map<string, (typeof learningLearnables.$inferSelect)[]>();
+        await Promise.all(
+            input.items.map(async (item) => {
+                const normalized = normalizedByItemId.get(item.workspaceItemId)!;
+                const exactCount = exactRows.filter((row) => row.type === item.type && row.normalizedText === normalized).length;
+                const aliasCount = aliasRows.filter((row) => row.normalizedAliasText === normalized).length;
+                const needed = Math.max(0, (item.limit ?? 3) - exactCount - aliasCount);
+                if (needed === 0) return;
+
+                const fuzzyRows = await this.database
+                    .select()
+                    .from(learningLearnables)
+                    .where(
+                        and(
+                            eq(learningLearnables.languageId, language.id),
+                            eq(learningLearnables.type, item.type),
+                            or(
+                                ilike(learningLearnables.canonicalText, `%${item.query}%`),
+                                ilike(learningLearnables.translation, `%${item.query}%`),
+                                ilike(learningLearnables.searchDocument, `%${item.query}%`),
+                            ),
+                        ),
+                    )
+                    .orderBy(desc(learningLearnables.occurrenceCount))
+                    .limit(needed);
+
+                fuzzyRowsByItemId.set(item.workspaceItemId, fuzzyRows);
+            }),
+        );
+
+        const allRows = [...exactRows, ...aliasLearnableRows, ...Array.from(fuzzyRowsByItemId.values()).flat()];
+        const uniqueRowsById = new Map(allRows.map((row) => [row.id, row]));
+        const hydratedLearnables = await this.hydrateLearnables(Array.from(uniqueRowsById.values()));
+        const learnableById = new Map(hydratedLearnables.map((learnable) => [String(learnable.id), learnable] as const));
+
+        const aliasIdsByNormalized = new Map<string, string[]>();
+        for (const aliasRow of aliasRows) {
+            const ids = aliasIdsByNormalized.get(aliasRow.normalizedAliasText) ?? [];
+            ids.push(aliasRow.learnableId);
+            aliasIdsByNormalized.set(aliasRow.normalizedAliasText, ids);
+        }
+
+        const result: Record<string, readonly LearnableMatch[]> = {};
+        for (const item of input.items) {
+            const normalized = normalizedByItemId.get(item.workspaceItemId)!;
+            const limit = item.limit ?? 3;
+            const seenIds = new Set<string>();
+            const matches: LearnableMatch[] = [];
+
+            for (const row of exactRows) {
+                if (row.type !== item.type || row.normalizedText !== normalized) continue;
+                const learnable = learnableById.get(row.id);
+                if (!learnable || seenIds.has(learnable.id)) continue;
+                matches.push({ learnable, confidence: 1, reason: "exact" });
+                seenIds.add(learnable.id);
+                if (matches.length >= limit) break;
+            }
+
+            if (matches.length < limit) {
+                for (const aliasLearnableId of aliasIdsByNormalized.get(normalized) ?? []) {
+                    const learnable = learnableById.get(aliasLearnableId);
+                    if (!learnable || learnable.type !== item.type || seenIds.has(learnable.id)) continue;
+                    matches.push({ learnable, confidence: 0.92, reason: "alias" });
+                    seenIds.add(learnable.id);
+                    if (matches.length >= limit) break;
+                }
+            }
+
+            if (matches.length < limit) {
+                for (const row of fuzzyRowsByItemId.get(item.workspaceItemId) ?? []) {
+                    const learnable = learnableById.get(row.id);
+                    if (!learnable || seenIds.has(learnable.id)) continue;
+                    matches.push({ learnable, confidence: 0.74, reason: "lexical" });
+                    seenIds.add(learnable.id);
+                    if (matches.length >= limit) break;
+                }
+            }
+
+            result[item.workspaceItemId] = matches;
+        }
+
+        logQueryTiming("findLexicalMatchesBatch", startedAt);
+        return result;
     }
 
     public async findSemanticMatches(input: SemanticSearchInput): Promise<readonly LearnableMatch[]> {
+        const startedAt = performance.now();
         const language = await this.findLanguageByCode(input.languageCode);
 
         if (!language) {
+            logQueryTiming("findSemanticMatches", startedAt);
             return [];
         }
 
@@ -579,11 +803,13 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
 
         const learnables = await this.hydrateLearnables(rows.map((entry) => entry.row));
 
-        return rows.map((entry) => ({
+        const result = rows.map((entry) => ({
             learnable: learnables.find((learnable) => learnable.id === entry.row.id)!,
             confidence: Math.max(0, 1 - Number(entry.distance)),
             reason: "semantic" as const,
         }));
+        logQueryTiming("findSemanticMatches", startedAt);
+        return result;
     }
 
     private async hydrateLearnables(rows: readonly (typeof learningLearnables.$inferSelect)[]) {
@@ -602,14 +828,21 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             .where(inArray(learningLearnableExamples.learnableId, ids))
             .orderBy(desc(learningLearnableExamples.createdAt));
 
+        const aliasesByLearnableId = new Map<string, string[]>();
+        for (const alias of aliases) {
+            const list = aliasesByLearnableId.get(alias.learnableId) ?? [];
+            list.push(alias.aliasText);
+            aliasesByLearnableId.set(alias.learnableId, list);
+        }
+        const examplesByLearnableId = new Map<string, ReturnType<LearningConverter["convertLearnableExample"]>[]>();
+        for (const example of examples) {
+            const list = examplesByLearnableId.get(example.learnableId) ?? [];
+            list.push(this.converter.convertLearnableExample(example));
+            examplesByLearnableId.set(example.learnableId, list);
+        }
+
         return rows.map((row) =>
-            this.converter.convertLearnable(
-                row,
-                aliases.filter((alias) => alias.learnableId === row.id).map((alias) => alias.aliasText),
-                examples
-                    .filter((example) => example.learnableId === row.id)
-                    .map((example) => this.converter.convertLearnableExample(example)),
-            ),
+            this.converter.convertLearnable(row, aliasesByLearnableId.get(row.id) ?? [], examplesByLearnableId.get(row.id) ?? []),
         );
     }
 

@@ -12,6 +12,7 @@ import type {
     SentenceWorkspace,
     SentenceWorkspaceId,
     UpdateLearnableInput,
+    SuggestionStatus,
     WorkspaceItem,
     WorkspaceItemId,
     WorkspaceStatus,
@@ -109,7 +110,22 @@ export interface SentenceWorkspaceRepository {
     markFailed(workspaceId: SentenceWorkspaceId, errorMessage: string): Promise<void>;
     markSaved(workspaceId: SentenceWorkspaceId, reviewedAnalysisJson: Readonly<Record<string, unknown>>): Promise<SentenceWorkspace>;
     findWorkspaceById(workspaceId: SentenceWorkspaceId): Promise<SentenceWorkspace | undefined>;
-    listWorkspaces(createdByUserId: string, languageCode?: string): Promise<readonly SentenceWorkspace[]>;
+    listWorkspaces(
+        createdByUserId: string,
+        languageCode?: string,
+        options?: { readonly query?: string; readonly limit?: number; readonly offset?: number; readonly includeItems?: boolean },
+    ): Promise<readonly SentenceWorkspace[]>;
+    setWorkspaceItemSuggestions(input: {
+        readonly workspaceItemId: WorkspaceItemId;
+        readonly duplicateSuggestions: readonly LearnableMatch[];
+        readonly status: SuggestionStatus;
+        readonly error?: string;
+    }): Promise<void>;
+    setWorkspaceItemSuggestionStatus(input: {
+        readonly workspaceItemId: WorkspaceItemId;
+        readonly status: SuggestionStatus;
+        readonly error?: string;
+    }): Promise<void>;
 }
 
 export interface LearnableRepository {
@@ -123,6 +139,7 @@ export interface LearnableRepository {
     updateLearnable(id: LearnableId, input: UpdateLearnableInput): Promise<Learnable>;
     touchLearnable(id: LearnableId, now: Date): Promise<Learnable>;
     listRelatedLearnables(id: LearnableId): Promise<readonly RelatedLearnable[]>;
+    listAllRelatedLearnables(languageId: Language["id"]): Promise<readonly RelatedLearnable[]>;
 }
 
 export interface OccurrenceRepository {
@@ -144,4 +161,13 @@ export interface LearningSearchRepository {
         readonly limit?: number;
     }): Promise<readonly LearnableMatch[]>;
     findSemanticMatches(input: SemanticSearchInput): Promise<readonly LearnableMatch[]>;
+    findLexicalMatchesBatch(input: {
+        readonly languageCode: string;
+        readonly items: readonly {
+            readonly workspaceItemId: WorkspaceItemId;
+            readonly type: LearnableType;
+            readonly query: string;
+            readonly limit?: number;
+        }[];
+    }): Promise<Readonly<Record<string, readonly LearnableMatch[]>>>;
 }
