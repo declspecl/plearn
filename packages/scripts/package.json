@@ -6,6 +6,8 @@
         "build": "pnpm exec tsc --noEmit",
         "owner:bootstrap:dev": "pnpm exec dotenv -e ../../apps/website/.env.development -e ../../apps/website/.env.development.local -- pnpm exec tsx src/bootstrap-owner.ts",
         "owner:bootstrap:prod": "pnpm exec dotenv -e ../../apps/website/.env.production -- pnpm exec tsx src/bootstrap-owner.ts",
+        "languages:seed:dev": "pnpm exec dotenv -e ../../apps/website/.env.development -e ../../apps/website/.env.development.local -- pnpm exec tsx src/seed-languages.ts",
+        "languages:seed:prod": "pnpm exec dotenv -e ../../apps/website/.env.production -- pnpm exec tsx src/seed-languages.ts",
         "sync-root-workspace-scripts": "pnpm exec tsx src/sync-root-workspace-scripts.ts",
         "lint": "pnpm exec eslint --cache --cache-location .cache/eslint . --fix",
         "prettier": "pnpm exec prettier --cache --cache-location .cache/prettier --ignore-path ../../.prettierignore . --write",
