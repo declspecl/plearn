@@ -1,6 +1,6 @@
 "use client";
 
-import { colorizeWord, type VietnameseTone } from "@plearn/core/vietnamese/tone-parser";
+import { getWordTone, type VietnameseTone } from "@plearn/core/vietnamese/tone-parser";
 import { api } from "@plearn/trpc/client/react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
@@ -70,7 +70,7 @@ function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly A
 }
 
 function ToneColoredWord({ text }: { text: string }) {
-    return <span className={TONE_CLASS[colorizeWord(text).tone]}>{text}</span>;
+    return <span className={TONE_CLASS[getWordTone(text)]}>{text}</span>;
 }
 
 function PulsingDots() {
