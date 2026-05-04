@@ -1,10 +1,13 @@
 import type {
+    ComponentProposal,
     Learnable,
     LearnableId,
     LearnableMatch,
-    LearnableProposal,
+    LearnableType,
+    SentenceAnalysis,
     SentenceWorkspace,
     SentenceWorkspaceId,
+    WordProposal,
     WorkspaceItem,
 } from "./model";
 import type {
@@ -43,6 +46,12 @@ function buildSearchDocument(proposal: {
         .join("\n");
 }
 
+function extractPatternTemplate(proposedJson: Readonly<Record<string, unknown>>): string | undefined {
+    if (typeof proposedJson.formula === "string") return proposedJson.formula;
+    if (typeof proposedJson.patternTemplate === "string") return proposedJson.patternTemplate;
+    return undefined;
+}
+
 function toWorkspaceReviewJson(workspace: SentenceWorkspace): Readonly<Record<string, unknown>> {
     return {
         summary: workspace.summary,
@@ -59,13 +68,36 @@ function toWorkspaceReviewJson(workspace: SentenceWorkspace): Readonly<Record<st
     };
 }
 
-function flattenAnalysis(analysis: {
-    readonly grammarPatterns: readonly LearnableProposal[];
-    readonly vocabulary: readonly LearnableProposal[];
-    readonly utilityWords: readonly LearnableProposal[];
-    readonly phrases: readonly LearnableProposal[];
-}): readonly LearnableProposal[] {
-    return [...analysis.grammarPatterns, ...analysis.vocabulary, ...analysis.utilityWords, ...analysis.phrases];
+interface FlattenedItem {
+    readonly proposedType: LearnableType;
+    readonly proposedText: string;
+    readonly proposedTranslation: string;
+    readonly proposedNotes: string;
+    readonly proposedJson: Readonly<Record<string, unknown>>;
+}
+
+function flattenAnalysis(analysis: SentenceAnalysis): readonly FlattenedItem[] {
+    const componentItems: FlattenedItem[] = analysis.components.map((c: ComponentProposal) => ({
+        proposedType: c.learnableType,
+        proposedText: c.text,
+        proposedTranslation: c.meaning,
+        proposedNotes: c.formula + (c.notes ? `\n${c.notes}` : ""),
+        proposedJson: c as unknown as Readonly<Record<string, unknown>>,
+    }));
+
+    const componentTexts = new Set(analysis.components.map((c) => normalizeLearnableText(c.text)));
+
+    const wordItems: FlattenedItem[] = analysis.words
+        .filter((w) => !componentTexts.has(normalizeLearnableText(w.text)))
+        .map((w: WordProposal) => ({
+            proposedType: w.learnableType,
+            proposedText: w.text,
+            proposedTranslation: w.meaning,
+            proposedNotes: w.notes ?? "",
+            proposedJson: w as unknown as Readonly<Record<string, unknown>>,
+        }));
+
+    return [...componentItems, ...wordItems];
 }
 
 export class SentenceAnalysisService {
@@ -94,12 +126,8 @@ export class SentenceAnalysisService {
             });
 
             const flattened = flattenAnalysis(analyzed.analysis);
-            const items = flattened.map((proposal, index) => ({
-                proposedType: proposal.type,
-                proposedText: proposal.text,
-                proposedTranslation: proposal.translation,
-                proposedNotes: proposal.notes,
-                proposedJson: proposal as unknown as Readonly<Record<string, unknown>>,
+            const items = flattened.map((item, index) => ({
+                ...item,
                 position: index,
             }));
 
@@ -110,7 +138,7 @@ export class SentenceAnalysisService {
                 analysisModelId: analyzed.modelId,
                 analysisPromptVersion: analyzed.promptVersion,
                 rawAnalysisJson: analyzed.analysis as unknown as Readonly<Record<string, unknown>>,
-                summary: analyzed.analysis.summary,
+                summary: `${analyzed.analysis.sentence.text} — ${analyzed.analysis.sentence.meaning}`,
                 items,
             });
 
@@ -147,8 +175,10 @@ export class SentenceAnalysisService {
                     mergeTargetLearnableId:
                         item.mergeTargetLearnableId ?? suggestions.find((suggestion) => suggestion.confidence >= 0.85)?.learnable.id,
                     reviewAction:
-                        item.reviewAction === "pending" && suggestions.some((suggestion) => suggestion.confidence >= 0.85)
-                            ? "merge_existing"
+                        item.reviewAction === "pending"
+                            ? suggestions.some((suggestion) => suggestion.confidence >= 0.85)
+                                ? "merge_existing"
+                                : "create_new"
                             : item.reviewAction,
                 } satisfies WorkspaceItem;
             }),
@@ -222,14 +252,12 @@ export class WorkspaceReviewService {
                     partOfSpeech:
                         typeof item.proposedJson.partOfSpeech === "string" ? item.proposedJson.partOfSpeech : current.partOfSpeech,
                     usageNotes: item.proposedNotes,
-                    patternTemplate:
-                        typeof item.proposedJson.patternTemplate === "string" ? item.proposedJson.patternTemplate : current.patternTemplate,
+                    patternTemplate: extractPatternTemplate(item.proposedJson) ?? current.patternTemplate,
                     searchDocument: buildSearchDocument({
                         canonicalText: current.canonicalText,
                         translation: item.proposedTranslation,
                         usageNotes: item.proposedNotes,
-                        patternTemplate:
-                            typeof item.proposedJson.patternTemplate === "string" ? item.proposedJson.patternTemplate : undefined,
+                        patternTemplate: extractPatternTemplate(item.proposedJson),
                         aliases: Array.from(
                             new Set([...current.aliases, normalizedText !== current.normalizedText ? item.proposedText : ""]),
                         ).filter(Boolean),
@@ -258,7 +286,7 @@ export class WorkspaceReviewService {
                     canonicalText: item.proposedText,
                     translation: item.proposedTranslation,
                     usageNotes: item.proposedNotes,
-                    patternTemplate: typeof item.proposedJson.patternTemplate === "string" ? item.proposedJson.patternTemplate : undefined,
+                    patternTemplate: extractPatternTemplate(item.proposedJson),
                 });
 
                 const embedding = await this.embedder.embed(embeddingSourceText);
@@ -271,7 +299,7 @@ export class WorkspaceReviewService {
                     translation: item.proposedTranslation,
                     partOfSpeech: typeof item.proposedJson.partOfSpeech === "string" ? item.proposedJson.partOfSpeech : undefined,
                     usageNotes: item.proposedNotes,
-                    patternTemplate: typeof item.proposedJson.patternTemplate === "string" ? item.proposedJson.patternTemplate : undefined,
+                    patternTemplate: extractPatternTemplate(item.proposedJson),
                     difficulty:
                         typeof item.proposedJson.difficulty === "number"
                             ? Math.max(0, Math.min(1, item.proposedJson.difficulty))
@@ -280,8 +308,7 @@ export class WorkspaceReviewService {
                         canonicalText: item.proposedText,
                         translation: item.proposedTranslation,
                         usageNotes: item.proposedNotes,
-                        patternTemplate:
-                            typeof item.proposedJson.patternTemplate === "string" ? item.proposedJson.patternTemplate : undefined,
+                        patternTemplate: extractPatternTemplate(item.proposedJson),
                         aliases: Array.isArray(item.proposedJson.aliases)
                             ? item.proposedJson.aliases.filter((alias): alias is string => typeof alias === "string")
                             : [],

@@ -7,12 +7,9 @@ import {
     SentenceAnalysisService,
     WorkspaceReviewService,
 } from "@plearn/core/learning/service";
-import { TaskService } from "@plearn/core/task/service";
 import { createDatabaseClient } from "@plearn/db/client";
 import { LearningConverter } from "@plearn/dependency/postgres/learning/converter";
 import { LearningFacade } from "@plearn/dependency/postgres/learning/facade";
-import { TaskConverter } from "@plearn/dependency/postgres/task/converter";
-import { TaskFacade } from "@plearn/dependency/postgres/task/facade";
 import "server-only";
 
 let cachedDatabaseClient: ReturnType<typeof createDatabaseClient> | undefined;
@@ -65,7 +62,6 @@ export function getServices() {
         learnableCatalogService: new LearnableCatalogService(learningFacade, learningFacade, learningFacade),
         semanticSearchService: new SemanticSearchService(learningFacade, embedder),
         sentenceAnalysisService: new SentenceAnalysisService(learningFacade, learningFacade, new VercelAiLearningAnalyzer()),
-        taskService: new TaskService(new TaskFacade(database, new TaskConverter())),
         workspaceReviewService: new WorkspaceReviewService(learningFacade, learningFacade, learningFacade, learningFacade, embedder),
     };
 }

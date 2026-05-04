@@ -8,58 +8,27 @@ import "server-only";
 import { z } from "zod";
 
 const analysisSchema = z.object({
-    summary: z.string(),
-    grammarPatterns: z.array(
+    sentence: z.object({
+        text: z.string(),
+        meaning: z.string(),
+    }),
+    components: z.array(
         z.object({
-            type: z.literal("grammar_pattern"),
             text: z.string(),
-            translation: z.string(),
-            notes: z.string(),
-            partOfSpeech: z.string().optional(),
-            patternTemplate: z.string().optional(),
-            rationale: z.string().optional(),
-            aliases: z.array(z.string()).optional(),
-            difficulty: z.number().min(0).max(1).optional(),
+            meaning: z.string(),
+            formula: z.string(),
+            learnableType: z.enum(["grammar_pattern", "phrase"]),
+            notes: z.string().optional(),
             exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
         }),
     ),
-    vocabulary: z.array(
+    words: z.array(
         z.object({
-            type: z.literal("vocabulary"),
             text: z.string(),
-            translation: z.string(),
-            notes: z.string(),
+            meaning: z.string(),
             partOfSpeech: z.string().optional(),
-            rationale: z.string().optional(),
-            aliases: z.array(z.string()).optional(),
-            difficulty: z.number().min(0).max(1).optional(),
-            exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
-        }),
-    ),
-    utilityWords: z.array(
-        z.object({
-            type: z.literal("utility_word"),
-            text: z.string(),
-            translation: z.string(),
-            notes: z.string(),
-            partOfSpeech: z.string().optional(),
-            rationale: z.string().optional(),
-            aliases: z.array(z.string()).optional(),
-            difficulty: z.number().min(0).max(1).optional(),
-            exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
-        }),
-    ),
-    phrases: z.array(
-        z.object({
-            type: z.literal("phrase"),
-            text: z.string(),
-            translation: z.string(),
-            notes: z.string(),
-            partOfSpeech: z.string().optional(),
-            patternTemplate: z.string().optional(),
-            rationale: z.string().optional(),
-            aliases: z.array(z.string()).optional(),
-            difficulty: z.number().min(0).max(1).optional(),
+            learnableType: z.enum(["vocabulary", "utility_word"]),
+            notes: z.string().optional(),
             exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
         }),
     ),
@@ -101,9 +70,11 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             model: getAnalysisModel(),
             schema: analysisSchema,
             prompt: [
-                "You are decomposing an English sentence into reusable Vietnamese learning units.",
-                "Return concise, high-signal study notes.",
-                "Prioritize reusable grammar patterns, useful vocabulary, utility words, and phrases.",
+                "You are decomposing an English sentence into Vietnamese learning units.",
+                "Return 3 sections:",
+                "1. sentence: the full Vietnamese translation with its English meaning.",
+                "2. components: phrases, structures, and grammar patterns. Each has Vietnamese text, English meaning, and a formula showing how to construct/use the pattern (e.g. 'Subject + đang + Verb'). Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for idiomatic phrases. For the formula field: describe usage, position, or structure — never just repeat the Vietnamese text itself.",
+                "3. words: individual Vietnamese words/graphemes with their English meaning and part of speech. Set learnableType to 'vocabulary' for content words or 'utility_word' for function words (particles, conjunctions, etc.). Do not include a word in both components and words — if it appears as a component, omit it from words.",
                 "Do not invent duplicate items unless they are genuinely different learnable concepts.",
                 `Target language code: ${input.languageCode}`,
                 `Sentence: ${input.sourceText}`,
@@ -114,7 +85,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             analysis: result.object,
             modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
             modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-            promptVersion: "v1",
+            promptVersion: "v2",
         };
     }
 }

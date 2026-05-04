@@ -72,6 +72,10 @@
         "./shared/model/id": {
             "types": "./src/shared/model/id.ts",
             "default": "./dist/shared/model/id.js"
+        },
+        "./vietnamese/tone-parser": {
+            "types": "./src/vietnamese/tone-parser.ts",
+            "default": "./dist/vietnamese/tone-parser.js"
         }
     }
 }

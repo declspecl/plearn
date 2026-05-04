@@ -95,27 +95,39 @@ export interface Occurrence {
     readonly createdAt: Date;
 }
 
-export interface LearnableProposal {
-    readonly type: LearnableType;
+export interface SentenceTranslation {
     readonly text: string;
-    readonly translation: string;
-    readonly notes: string;
-    readonly partOfSpeech?: string;
-    readonly patternTemplate?: string;
+    readonly meaning: string;
+}
+
+export interface ComponentProposal {
+    readonly text: string;
+    readonly meaning: string;
+    readonly formula: string;
+    readonly learnableType: "grammar_pattern" | "phrase";
+    readonly notes?: string;
     readonly exampleHints: readonly {
         readonly exampleText: string;
         readonly translation: string;
     }[];
-    readonly rationale?: string;
-    readonly aliases?: readonly string[];
+}
+
+export interface WordProposal {
+    readonly text: string;
+    readonly meaning: string;
+    readonly partOfSpeech?: string;
+    readonly learnableType: "vocabulary" | "utility_word";
+    readonly notes?: string;
+    readonly exampleHints: readonly {
+        readonly exampleText: string;
+        readonly translation: string;
+    }[];
 }
 
 export interface SentenceAnalysis {
-    readonly summary: string;
-    readonly grammarPatterns: readonly LearnableProposal[];
-    readonly vocabulary: readonly LearnableProposal[];
-    readonly utilityWords: readonly LearnableProposal[];
-    readonly phrases: readonly LearnableProposal[];
+    readonly sentence: SentenceTranslation;
+    readonly components: readonly ComponentProposal[];
+    readonly words: readonly WordProposal[];
 }
 
 export interface WorkspaceItem {

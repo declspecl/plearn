@@ -31,14 +31,6 @@
         "./postgres/learning/facade": {
             "types": "./src/postgres/learning/facade.ts",
             "default": "./dist/postgres/learning/facade.js"
-        },
-        "./postgres/task/converter": {
-            "types": "./src/postgres/task/converter.ts",
-            "default": "./dist/postgres/task/converter.js"
-        },
-        "./postgres/task/facade": {
-            "types": "./src/postgres/task/facade.ts",
-            "default": "./dist/postgres/task/facade.js"
         }
     }
 }

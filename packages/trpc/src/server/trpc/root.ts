@@ -1,5 +1,4 @@
 import { learningRouter } from "./learning-router";
-import { taskRouter } from "./task-router";
 import { createTRPCRouter } from "./trpc";
 
 /**
@@ -9,7 +8,6 @@ import { createTRPCRouter } from "./trpc";
  */
 export const appRouter = createTRPCRouter({
     learning: learningRouter,
-    task: taskRouter,
 });
 
 // export type definition of API

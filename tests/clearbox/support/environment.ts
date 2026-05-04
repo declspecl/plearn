@@ -1,8 +1,7 @@
 import { createComposition } from "@plearn/composition/create-composition";
 import type { CreateCompositionOptions } from "@plearn/composition/create-composition";
-import { compositionDomain } from "@plearn/composition/domain";
 
-export const clearboxDomains = [compositionDomain.task] as const;
+export const clearboxDomains = [] as const;
 
 export interface ClearboxEnvironment {
     readonly compositionOptions: CreateCompositionOptions<typeof clearboxDomains>;
