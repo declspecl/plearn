@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
@@ -391,32 +391,23 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
 
     return (
         <div className="space-y-8">
-            <Card className="overflow-hidden shadow-lg">
-                <CardHeader className="border-border bg-accent border-b">
-                    <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.03em]">Sentence Decomposer</CardTitle>
-                    <CardDescription className="max-w-2xl text-sm text-pretty">
-                        Feed an English sentence into the workspace, inspect the extracted Vietnamese learnables, then decide what becomes
-                        part of your long-term catalog.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                    <Textarea
-                        className="min-h-32 resize-y text-base"
-                        placeholder="Type the English sentence you want to decompose..."
-                        value={sourceText}
-                        onChange={(event) => setSourceText(event.target.value)}
-                    />
-                    <div className="flex items-center gap-3">
-                        <Button disabled={!deferredText.trim() || analyzeMutation.isPending} onClick={analyze} type="button">
-                            {analyzeMutation.isPending ? "Analyzing..." : "Analyze Sentence"}
-                        </Button>
-                        {saveMessage ? <span className="text-success-foreground text-sm">{saveMessage}</span> : null}
-                        {analyzeMutation.error ? (
-                            <span className="text-destructive-foreground text-sm">{analyzeMutation.error.message}</span>
-                        ) : null}
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="space-y-4">
+                <Textarea
+                    className="border-border bg-background min-h-32 resize-y text-base shadow-sm"
+                    placeholder="Type the English sentence you want to decompose..."
+                    value={sourceText}
+                    onChange={(event) => setSourceText(event.target.value)}
+                />
+                <div className="flex items-center gap-3">
+                    <Button disabled={!deferredText.trim() || analyzeMutation.isPending} onClick={analyze} type="button">
+                        {analyzeMutation.isPending ? "Analyzing..." : "Analyze Sentence"}
+                    </Button>
+                    {saveMessage ? <span className="text-success-foreground text-sm">{saveMessage}</span> : null}
+                    {analyzeMutation.error ? (
+                        <span className="text-destructive-foreground text-sm">{analyzeMutation.error.message}</span>
+                    ) : null}
+                </div>
+            </div>
 
             <AnimatePresence>
                 {analyzeMutation.isPending ? <AnalysisProgress isActive={analyzeMutation.isPending} /> : null}

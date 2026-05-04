@@ -528,7 +528,7 @@ function SidebarRail({
             if (resizeState?.rafId != null) {
                 globalThis.cancelAnimationFrame(resizeState.rafId);
             }
-            for (const element of resizeState?.transitionTargets) {
+            for (const element of resizeState?.transitionTargets ?? []) {
                 element.style.removeProperty("transition-duration");
             }
             document.body.style.removeProperty("cursor");

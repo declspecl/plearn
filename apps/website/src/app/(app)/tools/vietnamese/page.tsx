@@ -1,14 +1,14 @@
+import { ArtisanWorkbenchBanner } from "./_components/artisan-workbench-banner";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
+import { ArrowRight, ChartLineUp, ListMagnifyingGlass, Stack } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 export default async function VietnameseToolPage() {
     const caller = await createTRPCCaller();
     const [learnables, workspaces] = await Promise.all([
         caller.learning.listLearnables({
             languageCode: "vi",
-            limit: 5,
+            limit: 3,
             sort: "frequency",
         }),
         caller.learning.listSentenceWorkspaces({
@@ -17,84 +17,89 @@ export default async function VietnameseToolPage() {
     ]);
 
     return (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
-            <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                <Card className="border-border bg-accent">
-                    <CardHeader>
-                        <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">Vietnamese Workspace</CardTitle>
-                        <CardDescription className="max-w-2xl text-base leading-7">
-                            This tool is tuned for translating the English voice in your head into reusable Vietnamese patterns. Each saved
-                            sentence contributes to a growing semantic catalog rather than disappearing after one session.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-3">
-                        <Button render={<Link href="/tools/vietnamese/analyze" />}>Analyze Sentence</Button>
-                        <Button render={<Link href="/tools/vietnamese/catalog" />} variant="secondary">
-                            Open Catalog
-                        </Button>
-                        <Button render={<Link href="/tools/vietnamese/sentences" />} variant="secondary">
-                            Sentence History
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <div className="grid gap-4">
-                    <Card>
-                        <CardHeader>
-                            <CardDescription>Catalog Size</CardDescription>
-                            <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.04em]">{learnables.length}</CardTitle>
-                        </CardHeader>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardDescription>Sentence Workspaces</CardDescription>
-                            <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.04em]">{workspaces.length}</CardTitle>
-                        </CardHeader>
-                    </Card>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-8 py-12">
+            {/* The Open-Air Header */}
+            <header className="space-y-4">
+                <h1 className="text-foreground text-5xl leading-tight font-[var(--font-display)] tracking-[-0.05em]">
+                    The Translator&apos;s Workbench
+                </h1>
+                <div className="text-muted-foreground flex items-center gap-3 font-mono text-xs">
+                    <span>Catalog: {learnables.length} Items</span>
+                    <span className="bg-border h-1 w-1 rounded-full" />
+                    <span>Active Workspaces: {workspaces.length}</span>
                 </div>
-            </section>
+            </header>
 
-            <section className="grid gap-6 lg:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Most Frequent Learnables</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {learnables.map((learnable) => (
-                            <Link
-                                key={learnable.id}
-                                className="border-border bg-muted flex items-center justify-between rounded-2xl border px-4 py-3"
-                                href={`/tools/vietnamese/catalog/${learnable.id}`}
-                            >
-                                <div>
-                                    <p className="font-medium">{learnable.canonicalText}</p>
-                                    <p className="text-muted-foreground text-sm">{learnable.translation}</p>
-                                </div>
-                                <span className="text-muted-foreground text-xs tracking-[0.18em] uppercase">
-                                    {learnable.occurrenceCount}x
-                                </span>
-                            </Link>
-                        ))}
-                    </CardContent>
-                </Card>
+            {/* Primary CTA */}
+            <ArtisanWorkbenchBanner />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Recent Sentences</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {workspaces.slice(0, 5).map((workspace) => (
-                            <Link
-                                key={workspace.id}
-                                className="border-border bg-muted block rounded-2xl border px-4 py-3"
-                                href={`/tools/vietnamese/sentences/${workspace.id}`}
-                            >
-                                <p className="text-foreground line-clamp-2 font-medium">{workspace.sourceText}</p>
-                                <p className="text-muted-foreground mt-1 text-sm">{workspace.summary ?? workspace.status}</p>
-                            </Link>
-                        ))}
-                    </CardContent>
-                </Card>
+            {/* The Module Grid */}
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {/* The Lexicon (Catalog) */}
+                <Link
+                    href="/tools/vietnamese/catalog"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                >
+                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
+                        <Stack weight="duotone" className="size-6" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Lexicon</h2>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                            Your semantic catalog of vocabulary, grammar, and phrases extracted from inner monologues.
+                        </p>
+                    </div>
+                    <div className="border-border border-t pt-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground font-medium">View Catalog</span>
+                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
+                        </div>
+                    </div>
+                </Link>
+
+                {/* The Ledger (History) */}
+                <Link
+                    href="/tools/vietnamese/sentences"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                >
+                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
+                        <ListMagnifyingGlass weight="duotone" className="size-6" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Ledger</h2>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                            A chronological archive of your sentence workspaces and structural decompositions.
+                        </p>
+                    </div>
+                    <div className="border-border border-t pt-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground font-medium">View History</span>
+                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
+                        </div>
+                    </div>
+                </Link>
+
+                {/* The Pulse (Insights) */}
+                <Link
+                    href="/tools/vietnamese/insights"
+                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                >
+                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
+                        <ChartLineUp weight="duotone" className="size-6" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Pulse</h2>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                            System analytics, frequency charts, and trajectory of your learning progress.
+                        </p>
+                    </div>
+                    <div className="border-border border-t pt-4">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground font-medium">View Insights</span>
+                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
+                        </div>
+                    </div>
+                </Link>
             </section>
         </div>
     );

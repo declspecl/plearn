@@ -48,7 +48,7 @@ export function ArtisanVietnameseLandmark() {
                         className="fill-accent stroke-border group-hover:stroke-primary/50 transition-colors duration-500"
                         strokeWidth="1"
                     />
-                    <text x="75" y="24" textAnchor="middle" className="fill-foreground font-mono text-[10px] tracking-[0.15em] uppercase">
+                    <text x="75" y="24" textAnchor="middle" className="fill-foreground font-mono text-[11px]">
                         Inner Monologue
                     </text>
                 </g>
@@ -59,12 +59,7 @@ export function ArtisanVietnameseLandmark() {
                     <text x="65" y="25" textAnchor="middle" className="fill-foreground font-serif text-sm italic">
                         Từ vựng
                     </text>
-                    <text
-                        x="65"
-                        y="55"
-                        textAnchor="middle"
-                        className="fill-muted-foreground font-mono text-[9px] tracking-[0.2em] uppercase"
-                    >
+                    <text x="65" y="55" textAnchor="middle" className="fill-muted-foreground font-mono text-[10px]">
                         Vocabulary
                     </text>
                 </g>
@@ -74,12 +69,7 @@ export function ArtisanVietnameseLandmark() {
                     <text x="65" y="25" textAnchor="middle" className="fill-foreground font-serif text-sm italic">
                         Ngữ pháp
                     </text>
-                    <text
-                        x="65"
-                        y="55"
-                        textAnchor="middle"
-                        className="fill-muted-foreground font-mono text-[9px] tracking-[0.2em] uppercase"
-                    >
+                    <text x="65" y="55" textAnchor="middle" className="fill-muted-foreground font-mono text-[10px]">
                         Grammar
                     </text>
                 </g>

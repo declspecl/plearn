@@ -1,3 +1,4 @@
+import { LearnableBadge } from "@/components/learning/learnable-badge";
 import { getServices } from "@/lib/server/clients";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
@@ -30,7 +31,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
             <Card className="border-border bg-accent">
                 <CardHeader>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline">{learnable.type.replaceAll("_", " ")}</Badge>
+                        <LearnableBadge type={learnable.type} />
                         <Badge variant="secondary">{learnable.occurrenceCount} occurrences</Badge>
                     </div>
                     <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">{learnable.canonicalText}</CardTitle>
@@ -38,7 +39,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                 </CardHeader>
                 <CardContent className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-4">
-                        <p className="text-muted-foreground text-sm tracking-[0.2em] uppercase">Study Notes</p>
+                        <p className="text-muted-foreground text-sm font-medium">Study Notes</p>
                         <p className="text-base leading-7">{learnable.usageNotes}</p>
                         {learnable.patternTemplate ? (
                             <div className="border-border bg-card rounded-2xl border p-4 font-mono text-sm">
@@ -48,7 +49,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                     </div>
                     <div className="border-border bg-card space-y-4 rounded-[1.75rem] border p-5">
                         <div>
-                            <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">Aliases</p>
+                            <p className="text-muted-foreground text-sm font-medium">Aliases</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                                 {learnable.aliases.length > 0 ? (
                                     learnable.aliases.map((alias) => <Badge key={alias}>{alias}</Badge>)
@@ -58,7 +59,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                             </div>
                         </div>
                         <div>
-                            <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">Part Of Speech</p>
+                            <p className="text-muted-foreground text-sm font-medium">Part Of Speech</p>
                             <p className="text-muted-foreground mt-2 text-sm">{learnable.partOfSpeech ?? "Not specified"}</p>
                         </div>
                     </div>

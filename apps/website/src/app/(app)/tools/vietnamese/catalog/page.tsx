@@ -1,3 +1,4 @@
+import { LearnableBadge } from "@/components/learning/learnable-badge";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
@@ -41,14 +42,14 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
             <Card className="border-border bg-accent">
                 <CardHeader>
-                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">Learnable Catalog</CardTitle>
+                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">Catalog</CardTitle>
                     <CardDescription className="max-w-3xl text-base leading-7">
                         Search your Vietnamese compendium by exact wording, English gloss, usage notes, or semantic neighborhood.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 lg:grid-cols-2">
                     <form className="border-border bg-card space-y-3 rounded-2xl border p-4" method="get">
-                        <label className="text-muted-foreground block text-xs tracking-[0.2em] uppercase">Keyword Search</label>
+                        <label className="text-muted-foreground block text-sm font-medium">Keyword Search</label>
                         <input
                             className="border-input bg-background w-full rounded-xl border px-4 py-3 outline-none"
                             defaultValue={params.q}
@@ -63,7 +64,7 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                         </div>
                     </form>
                     <form className="border-border bg-card space-y-3 rounded-2xl border p-4" method="get">
-                        <label className="text-muted-foreground block text-xs tracking-[0.2em] uppercase">Semantic Search</label>
+                        <label className="text-muted-foreground block text-sm font-medium">Semantic Search</label>
                         <input
                             className="border-input bg-background w-full rounded-xl border px-4 py-3 outline-none"
                             defaultValue={params.semantic}
@@ -86,10 +87,10 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {semanticMatches.map((match) => (
                             <Link key={match.learnable.id} href={`/tools/vietnamese/catalog/${match.learnable.id}`}>
-                                <Card className="h-full">
+                                <Card className="hover:border-ring h-full transition hover:-translate-y-0.5">
                                     <CardHeader>
                                         <div className="flex items-center justify-between gap-3">
-                                            <Badge variant="outline">{match.learnable.type.replaceAll("_", " ")}</Badge>
+                                            <LearnableBadge type={match.learnable.type} />
                                             <span className="text-muted-foreground text-xs">{Math.round(match.confidence * 100)}%</span>
                                         </div>
                                         <CardTitle>{match.learnable.canonicalText}</CardTitle>
@@ -114,8 +115,10 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                         <Link key={learnable.id} href={`/tools/vietnamese/catalog/${learnable.id}`}>
                             <Card className="hover:border-ring h-full transition hover:-translate-y-0.5">
                                 <CardHeader>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline">{learnable.type.replaceAll("_", " ")}</Badge>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <LearnableBadge type={learnable.type} />
+                                        </div>
                                         <Badge variant="secondary">{learnable.occurrenceCount}x</Badge>
                                     </div>
                                     <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">
