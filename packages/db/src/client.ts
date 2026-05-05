@@ -9,7 +9,7 @@ export function createDatabaseClient(databaseUrl: string): DatabaseInstance {
     const isLocalDatabase = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
 
     if (isLocalDatabase) {
-        return pgDrizzle(databaseUrl, { schema, logger: true });
+        return pgDrizzle(databaseUrl, { schema, logger: false });
     }
 
     return neonDrizzle(neon(databaseUrl), { schema });

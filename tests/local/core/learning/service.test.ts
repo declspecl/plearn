@@ -97,6 +97,7 @@ describe("WorkspaceReviewService", () => {
             listLearnables: vi.fn(),
             findLearnableById: vi.fn(async () => existingLearnable),
             findExactMatch: vi.fn(),
+            findAllByNormalizedText: vi.fn(async () => []),
             findAliasMatch: vi.fn(),
             createLearnable: vi.fn(),
             updateLearnable: vi.fn(async (_id, input) => ({
@@ -124,17 +125,12 @@ describe("WorkspaceReviewService", () => {
             listOccurrencesForLearnable: vi.fn(),
             listOccurrencesForLanguage: vi.fn(),
         };
-        const search: LearningSearchRepository = {
-            findLexicalMatches: vi.fn(),
-            findSemanticMatches: vi.fn(),
-            findLexicalMatchesBatch: vi.fn(),
-        };
         const embedder: LearningEmbedder = {
             buildEmbeddingSourceText: vi.fn(),
             embed: vi.fn(),
         };
 
-        const service = new WorkspaceReviewService(workspaces, learnables, occurrences, search, embedder);
+        const service = new WorkspaceReviewService(workspaces, learnables, occurrences, embedder);
         const result = await service.saveWorkspace(workspace.id);
 
         expect(result.savedLearnables).toHaveLength(1);

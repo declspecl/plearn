@@ -17,12 +17,21 @@ export const learningRouter = createTRPCRouter({
             z.object({
                 languageCode: z.string().min(2),
                 sourceText: z.string().min(1),
+                clarifications: z
+                    .array(
+                        z.object({
+                            question: z.string(),
+                            answer: z.string(),
+                        }),
+                    )
+                    .optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
             return ctx.services.sentenceAnalysisService.analyzeSentence({
                 languageCode: input.languageCode,
                 sourceText: input.sourceText,
+                clarifications: input.clarifications,
                 createdByUserId: ctx.session.user.id,
             });
         }),

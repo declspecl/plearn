@@ -85,12 +85,29 @@ export interface SemanticSearchInput {
 }
 
 export interface LearningAnalyzer {
-    analyzeSentence(input: { languageCode: string; sourceText: string }): Promise<{
-        readonly analysis: SentenceAnalysis;
-        readonly modelProvider: string;
-        readonly modelId: string;
-        readonly promptVersion: string;
-    }>;
+    analyzeSentence(input: {
+        languageCode: string;
+        sourceText: string;
+        clarifications?: readonly { question: string; answer: string }[];
+    }): Promise<
+        | {
+              readonly status: "clarification_needed";
+              readonly clarification: {
+                  readonly question: string;
+                  readonly options: readonly { readonly id: string; readonly label: string; readonly isRecommended: boolean }[];
+              };
+              readonly modelProvider: string;
+              readonly modelId: string;
+              readonly promptVersion: string;
+          }
+        | {
+              readonly status: "analyzed";
+              readonly analysis: SentenceAnalysis;
+              readonly modelProvider: string;
+              readonly modelId: string;
+              readonly promptVersion: string;
+          }
+    >;
 }
 
 export interface LearningEmbedder {

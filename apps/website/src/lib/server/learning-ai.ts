@@ -34,6 +34,29 @@ const analysisSchema = z.object({
     ),
 });
 
+const responseSchema = z.discriminatedUnion("status", [
+    z.object({
+        status: z.literal("clarification_needed"),
+        clarification: z.object({
+            question: z.string(),
+            options: z
+                .array(
+                    z.object({
+                        id: z.string(),
+                        label: z.string(),
+                        isRecommended: z.boolean(),
+                    }),
+                )
+                .min(2)
+                .max(3),
+        }),
+    }),
+    z.object({
+        status: z.literal("analyzed"),
+        analysis: analysisSchema,
+    }),
+]);
+
 function getAnalysisModel() {
     const appConfig = getAppConfig();
 
@@ -64,29 +87,52 @@ function getEmbeddingModel() {
 }
 
 export class VercelAiLearningAnalyzer implements LearningAnalyzer {
-    public async analyzeSentence(input: { languageCode: string; sourceText: string }) {
+    public async analyzeSentence(input: {
+        languageCode: string;
+        sourceText: string;
+        clarifications?: readonly { question: string; answer: string }[];
+    }) {
         const appConfig = getAppConfig();
+
+        const previousClarifications = input.clarifications?.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n") ?? "";
+        const clarificationContext = previousClarifications ? `\n\nPrevious Clarifications:\n${previousClarifications}` : "";
+
         const result = await generateObject({
             model: getAnalysisModel(),
-            schema: analysisSchema,
+            schema: responseSchema,
             prompt: [
                 "You are decomposing an English sentence into Southern Vietnamese learning units.",
-                "Use Southern Vietnamese specifically: prefer common Southern words, particles, pronouns, everyday phrasing, and regional nuances. Avoid defaulting to Northern or overly formal textbook Vietnamese unless the input explicitly requires that register.",
-                "Return 3 sections:",
+                "Vietnamese social registers and pronouns (anh, chị, em, bạn, mày, tôi, etc.) are CRITICAL. If the source text contains pronouns like 'I', 'you', 'he', 'she', or 'they' and the relationship/relative ages are unknown, you MUST set status to 'clarification_needed'.",
+                "Do not default to formal 'tôi' or 'bạn' unless the input explicitly suggests a formal setting. In Southern Vietnamese, these are often too stiff. Prefer to ask who the speaker is talking to.",
+                "If the text is truly unambiguous or you have sufficient clarification context, set status to 'analyzed'.",
+                "For the decomposition, use Southern Vietnamese specifically: prefer common Southern words, particles, pronouns, everyday phrasing, and regional nuances.",
+                "Return 3 sections in the analysis:",
                 "1. sentence: the full Southern Vietnamese translation with its English meaning.",
                 "2. components: phrases, structures, and grammar patterns. Each has Southern Vietnamese text, English meaning, and a formula showing how to construct/use the pattern (e.g. 'Subject + đang + Verb'). Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for idiomatic phrases. For the formula field: describe usage, position, or structure — never just repeat the Vietnamese text itself.",
                 "3. words: individual Southern Vietnamese words/graphemes with their English meaning and part of speech. Set learnableType to 'vocabulary' for content words or 'utility_word' for function words (particles, conjunctions, etc.). Do not include a word in both components and words — if it appears as a component, omit it from words.",
                 "Do not invent duplicate items unless they are genuinely different learnable concepts.",
                 `Target language code: ${input.languageCode}`,
                 `Sentence: ${input.sourceText}`,
+                clarificationContext,
             ].join("\n"),
         });
 
+        if (result.object.status === "clarification_needed") {
+            return {
+                status: "clarification_needed" as const,
+                clarification: result.object.clarification,
+                modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
+                modelId: appConfig.LEARNING_ANALYSIS_MODEL,
+                promptVersion: "v4",
+            };
+        }
+
         return {
-            analysis: result.object,
+            status: "analyzed" as const,
+            analysis: result.object.analysis,
             modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
             modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-            promptVersion: "v3",
+            promptVersion: "v4",
         };
     }
 }

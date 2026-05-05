@@ -367,13 +367,20 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
 
 export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const router = useRouter();
-    const [sourceText, setSourceText] = useState(
-        () => getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY) ?? initialWorkspace?.sourceText ?? "",
-    );
+    const [sourceText, setSourceText] = useState(() => initialWorkspace?.sourceText ?? "");
     const [workspace, setWorkspace] = useState(initialWorkspace);
+    const [clarificationFlow, setClarificationFlow] = useState<
+        {
+            question: string;
+            options: { id: string; label: string; isRecommended: boolean }[];
+            answer?: string;
+        }[]
+    >([]);
     const [sentenceData, setSentenceData] = useState<SentenceData | undefined>(extractSentenceData(initialWorkspace?.rawAnalysisJson));
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
     const [expandedItemId, setExpandedItemId] = useState<string | null>(initialWorkspace?.items[0]?.id ?? null);
+    const [freeTextValue, setFreeTextValue] = useState("");
+    const [sourceDraftHydrated, setSourceDraftHydrated] = useState(false);
     const deferredText = useDeferredValue(sourceText);
     const analyzeMutation = api.learning.analyzeSentence.useMutation();
     const updateMutation = api.learning.updateWorkspaceReview.useMutation();
@@ -384,8 +391,17 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     );
 
     useEffect(() => {
+        const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
+        if (draft !== null) {
+            setSourceText(draft);
+        }
+        setSourceDraftHydrated(true);
+    }, []);
+
+    useEffect(() => {
+        if (!sourceDraftHydrated) return;
         setLocalStorageItem(ANALYSIS_DRAFT_KEY, sourceText);
-    }, [sourceText]);
+    }, [sourceDraftHydrated, sourceText]);
 
     useEffect(() => {
         if (!workspace) return;
@@ -436,12 +452,26 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         );
     }, [workspaceSuggestionsQuery.data]);
 
-    async function analyze() {
-        const nextWorkspace = await analyzeMutation.mutateAsync({
+    async function analyze(flowOverride?: typeof clarificationFlow) {
+        const activeFlow = flowOverride ?? clarificationFlow;
+        const nextWorkspaceResponse = await analyzeMutation.mutateAsync({
             languageCode: "vi",
             sourceText: deferredText,
+            clarifications: activeFlow.filter((c) => Boolean(c.answer)).map((c) => ({ question: c.question, answer: c.answer! })),
         });
 
+        if (nextWorkspaceResponse.status === "clarification_needed") {
+            setClarificationFlow((current) => [
+                ...current,
+                {
+                    question: nextWorkspaceResponse.clarification.question,
+                    options: [...nextWorkspaceResponse.clarification.options],
+                },
+            ]);
+            return;
+        }
+
+        const nextWorkspace = nextWorkspaceResponse.workspace;
         const rawJson = nextWorkspace.rawAnalysisJson as Record<string, unknown> | undefined;
         setSentenceData(extractSentenceData(rawJson));
         setWorkspace({
@@ -476,6 +506,13 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         });
         setExpandedItemId(nextWorkspace.items[0]?.id ?? null);
         setSaveMessage(null);
+        setClarificationFlow([]);
+    }
+
+    async function submitAnswer(index: number, answer: string) {
+        const nextFlow = clarificationFlow.map((c, i) => (i === index ? { ...c, answer } : c));
+        setClarificationFlow(nextFlow);
+        await analyze(nextFlow);
     }
 
     useEffect(() => {
@@ -589,15 +626,101 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                         ) : null}
                         <Button
                             disabled={!deferredText.trim() || analyzeMutation.isPending}
-                            onClick={analyze}
+                            onClick={() => analyze()}
                             type="button"
                             variant="secondary"
                         >
-                            {analyzeMutation.isPending ? "Analyzing..." : "Analyze →"}
+                            {analyzeMutation.isPending ? "Analyzing..." : "Analyze"}
                         </Button>
                     </div>
                 </div>
             </div>
+
+            {clarificationFlow.length > 0 ? (
+                <div className="space-y-4">
+                    {clarificationFlow.map((step, index) => (
+                        <div key={index} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] p-6">
+                            <p className="text-foreground mb-4 font-medium">{step.question}</p>
+                            {!step.answer ? (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {[...step.options]
+                                        .sort((a, b) => (a.isRecommended === b.isRecommended ? 0 : a.isRecommended ? -1 : 1))
+                                        .map((option) => (
+                                            <button
+                                                key={option.id}
+                                                onClick={() => {
+                                                    setFreeTextValue("");
+                                                    void submitAnswer(index, option.label);
+                                                }}
+                                                type="button"
+                                                className={cn(
+                                                    "hover:border-primary/60 rounded-lg border p-4 text-left transition-colors",
+                                                    option.isRecommended
+                                                        ? "border-primary/40 bg-primary/5"
+                                                        : "border-[color:var(--border)] bg-[color:var(--background)]",
+                                                )}
+                                            >
+                                                <span className="text-foreground block text-sm">{option.label}</span>
+                                                {option.isRecommended && (
+                                                    <span className="text-primary mt-1 block text-xs">Recommended</span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    <div className="flex flex-col gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] p-4">
+                                        <span className="block text-sm text-[color:var(--plearn-ink-3)]">Other / Free text</span>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                value={freeTextValue}
+                                                onChange={(e) => setFreeTextValue(e.target.value)}
+                                                placeholder="Type your answer..."
+                                                className="h-8 bg-transparent"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" && freeTextValue.trim()) {
+                                                        e.preventDefault();
+                                                        void submitAnswer(index, freeTextValue.trim());
+                                                        setFreeTextValue("");
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                disabled={!freeTextValue.trim()}
+                                                onClick={() => {
+                                                    void submitAnswer(index, freeTextValue.trim());
+                                                    setFreeTextValue("");
+                                                }}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-[color:var(--plearn-ink-3)]">
+                                        Answered: <span className="text-foreground">{step.answer}</span>
+                                    </span>
+                                    {index === clarificationFlow.length - 1 ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFreeTextValue(step.answer ?? "");
+                                                setClarificationFlow((current) =>
+                                                    current.map((c, i) => (i === index ? { ...c, answer: undefined } : c)),
+                                                );
+                                            }}
+                                        >
+                                            Back / Edit
+                                        </Button>
+                                    ) : null}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            ) : null}
 
             <AnimatePresence>
                 {analyzeMutation.isPending ? <AnalysisProgress isActive={analyzeMutation.isPending} /> : null}

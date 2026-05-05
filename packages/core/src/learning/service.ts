@@ -115,8 +115,8 @@ function cosineSimilarity(left: readonly number[], right: readonly number[]) {
     let leftNorm = 0;
     let rightNorm = 0;
 
-    for (let index = 0; index < left.length; index += 1) {
-        const leftValue = left[index] ?? 0;
+    for (const [index, element] of left.entries()) {
+        const leftValue = element ?? 0;
         const rightValue = right[index] ?? 0;
         dot += leftValue * rightValue;
         leftNorm += leftValue * leftValue;
@@ -187,8 +187,48 @@ export class SentenceAnalysisService {
         readonly languageCode: string;
         readonly sourceText: string;
         readonly createdByUserId: string;
-    }): Promise<SentenceWorkspace> {
+        readonly clarifications?: readonly { readonly question: string; readonly answer: string }[];
+    }): Promise<
+        | {
+              readonly status: "clarification_needed";
+              readonly clarification: {
+                  readonly question: string;
+                  readonly options: readonly { readonly id: string; readonly label: string; readonly isRecommended: boolean }[];
+              };
+          }
+        | {
+              readonly status: "analyzed";
+              readonly workspace: SentenceWorkspace;
+          }
+    > {
         const startedAt = performance.now();
+
+        const aiStartedAt = performance.now();
+        const analyzed = await this.analyzer.analyzeSentence({
+            languageCode: input.languageCode,
+            sourceText: input.sourceText,
+            clarifications: input.clarifications,
+        });
+
+        if (analyzed.status === "clarification_needed") {
+            logPerf("analysis.ai.clarification_needed", {
+                provider: analyzed.modelProvider,
+                modelId: analyzed.modelId,
+                elapsedMs: Math.round(performance.now() - aiStartedAt),
+            });
+
+            return {
+                status: "clarification_needed",
+                clarification: analyzed.clarification,
+            };
+        }
+
+        logPerf("analysis.ai.generateObject", {
+            provider: analyzed.modelProvider,
+            modelId: analyzed.modelId,
+            elapsedMs: Math.round(performance.now() - aiStartedAt),
+        });
+
         const createWorkspaceStartedAt = performance.now();
         const workspace = await this.workspaces.createWorkspace({
             languageCode: input.languageCode,
@@ -202,18 +242,6 @@ export class SentenceAnalysisService {
         });
 
         try {
-            const aiStartedAt = performance.now();
-            const analyzed = await this.analyzer.analyzeSentence({
-                languageCode: input.languageCode,
-                sourceText: input.sourceText,
-            });
-            logPerf("analysis.ai.generateObject", {
-                workspaceId: workspace.id,
-                provider: analyzed.modelProvider,
-                modelId: analyzed.modelId,
-                elapsedMs: Math.round(performance.now() - aiStartedAt),
-            });
-
             const flattened = flattenAnalysis(analyzed.analysis);
             const items = flattened.map((item, index) => ({
                 ...item,
@@ -245,7 +273,7 @@ export class SentenceAnalysisService {
                 elapsedMs: Math.round(performance.now() - startedAt),
             });
 
-            return saved;
+            return { status: "analyzed", workspace: saved };
         } catch (error) {
             await this.workspaces.markFailed(workspace.id, error instanceof Error ? error.message : String(error));
             throw error;
@@ -539,6 +567,7 @@ export class WorkspaceReviewService {
 
                 if (existing) {
                     existing.confidence = Math.max(existing.confidence, confidence);
+
                     return;
                 }
 
@@ -720,6 +749,7 @@ export class LearnableCatalogService {
         }
 
         const unique = [...new Set(subphrases)];
+
         return this.learnables.findAllByNormalizedTextsOrAliases({ languageId: language.id, normalizedTexts: unique });
     }
 

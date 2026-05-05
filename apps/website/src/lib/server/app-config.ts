@@ -10,12 +10,12 @@ const schema = z.object({
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     DEEPSEEK_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
-    LEARNING_ANALYSIS_PROVIDER: z.string().default("deepseek"),
-    LEARNING_ANALYSIS_MODEL: z.string().default("deepseek-chat"),
-    LEARNING_EMBEDDING_PROVIDER: z.string().default("openai"),
-    LEARNING_EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
+    LEARNING_ANALYSIS_PROVIDER: z.string(),
+    LEARNING_ANALYSIS_MODEL: z.string(),
+    LEARNING_EMBEDDING_PROVIDER: z.string(),
+    LEARNING_EMBEDDING_MODEL: z.string(),
     PLEARN_OWNER_EMAIL: z.email(),
-    PLEARN_OWNER_NAME: z.string().default("Plearn Owner"),
+    PLEARN_OWNER_NAME: z.string(),
     PLEARN_OWNER_PASSWORD: z.string().min(8),
 });
 
