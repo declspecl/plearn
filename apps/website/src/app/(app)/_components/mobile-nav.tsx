@@ -1,10 +1,10 @@
 "use client";
 
 import { AppSidebarContent } from "./app-sidebar-content";
+import { SiteLogo } from "@/components/brand/site-logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetPopup, SheetTrigger } from "@/components/ui/sheet";
 import { List } from "@phosphor-icons/react";
-import Link from "next/link";
 
 interface MobileNavProps {
     user: {
@@ -25,9 +25,7 @@ export function MobileNav({ user }: MobileNavProps) {
                         <AppSidebarContent user={user} />
                     </SheetPopup>
                 </Sheet>
-                <Link href="/" className="text-foreground text-xl font-[var(--font-display)] tracking-[-0.05em]">
-                    Plearn
-                </Link>
+                <SiteLogo variant="sm" priority />
             </div>
         </header>
     );

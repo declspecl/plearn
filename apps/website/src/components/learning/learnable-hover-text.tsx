@@ -59,7 +59,7 @@ export function LearnableHoverText({ hint, className }: { hint: LearnableHint; c
                 if (open) setHasOpened(true);
             }}
         >
-            <HoverCardTrigger delay={150} className={className}>
+            <HoverCardTrigger delay={150} className={className} render={<span />}>
                 <ToneColoredText text={hint.text} />
             </HoverCardTrigger>
             <HoverCardContent side="top" sideOffset={6} className="w-64">

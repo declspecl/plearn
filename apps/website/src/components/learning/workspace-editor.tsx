@@ -292,11 +292,8 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
 
 export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const router = useRouter();
-    const [sourceText, setSourceText] = useState(() => {
-        const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
-
-        return draft ?? initialWorkspace?.sourceText ?? "";
-    });
+    const [sourceText, setSourceText] = useState(initialWorkspace?.sourceText ?? "");
+    const [hasMounted, setHasMounted] = useState(false);
     const [workspace, setWorkspace] = useState(initialWorkspace);
     const [sentenceData, setSentenceData] = useState<SentenceData | undefined>(extractSentenceData(initialWorkspace?.rawAnalysisJson));
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -316,9 +313,19 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         },
     );
 
+    // Hydrate from localStorage after mount to avoid SSR/client mismatch
     useEffect(() => {
+        const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
+        if (draft !== null) {
+            setSourceText(draft);
+        }
+        setHasMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!hasMounted) return;
         setLocalStorageItem(ANALYSIS_DRAFT_KEY, sourceText);
-    }, [sourceText]);
+    }, [sourceText, hasMounted]);
 
     useEffect(() => {
         if (!workspace) return;

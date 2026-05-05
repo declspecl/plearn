@@ -28,6 +28,9 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
     title: "Plearn",
     description: "Private personal learning tools.",
+    appleWebApp: {
+        title: "Plearn",
+    },
 };
 
 export interface RootLayoutProps {

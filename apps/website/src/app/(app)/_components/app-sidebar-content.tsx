@@ -1,6 +1,6 @@
 import { AppNavigation } from "./app-navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import Link from "next/link";
+import { SiteLogo } from "@/components/brand/site-logo";
 
 interface AppSidebarContentProps {
     user: {
@@ -13,10 +13,8 @@ export function AppSidebarContent({ user }: AppSidebarContentProps) {
     return (
         <>
             <div className="flex flex-col gap-8 p-6">
-                <div className="space-y-1">
-                    <Link className="text-3xl font-[var(--font-display)] tracking-[-0.05em]" href="/">
-                        Plearn
-                    </Link>
+                <div className="space-y-3">
+                    <SiteLogo variant="md" priority />
                     <p className="text-muted-foreground font-mono text-[11px]">Personal Learning Systems</p>
                 </div>
 
