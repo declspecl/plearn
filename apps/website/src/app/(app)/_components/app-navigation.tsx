@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartLineUp, House, ListMagnifyingGlass, Stack, Translate } from "@phosphor-icons/react";
+import { BookOpenText, ChartLineUp, House, ListMagnifyingGlass, Stack, Translate } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "~/lib/utils";
@@ -13,6 +13,7 @@ export function AppNavigation() {
     const languageLinks = [
         { href: "/tools/vietnamese", label: "Hub", match: pathname === "/tools/vietnamese", icon: House },
         { href: "/tools/vietnamese/analyze", label: "Analyze", match: pathname.includes("/analyze"), icon: ListMagnifyingGlass },
+        { href: "/tools/vietnamese/explain", label: "Explain", match: pathname.includes("/explain"), icon: BookOpenText },
         { href: "/tools/vietnamese/catalog", label: "Catalog", match: pathname.includes("/catalog"), icon: Stack },
         { href: "/tools/vietnamese/sentences", label: "History", match: pathname.includes("/sentences"), icon: ListMagnifyingGlass },
         { href: "/tools/vietnamese/insights", label: "Insights", match: pathname.includes("/insights"), icon: ChartLineUp },

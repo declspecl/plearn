@@ -1,5 +1,7 @@
 import type {
     ComponentProposal,
+    ExplanationComponentProposal,
+    ExplanationWordProposal,
     Language,
     LanguageId,
     Learnable,
@@ -8,6 +10,7 @@ import type {
     LearnableType,
     RelatedLearnableType,
     SentenceAnalysis,
+    SentenceExplanation,
     SentenceWorkspace,
     SentenceWorkspaceId,
     WordProposal,
@@ -166,6 +169,30 @@ function flattenAnalysis(analysis: SentenceAnalysis): readonly FlattenedItem[] {
     const wordItems: FlattenedItem[] = analysis.words
         .filter((w) => !componentTexts.has(normalizeLearnableText(w.text)))
         .map((w: WordProposal) => ({
+            proposedType: w.learnableType,
+            proposedText: w.text,
+            proposedTranslation: w.meaning,
+            proposedNotes: w.notes ?? "",
+            proposedJson: jsonCloneAsRecord(w),
+        }));
+
+    return [...componentItems, ...wordItems];
+}
+
+function flattenExplanation(explanation: SentenceExplanation): readonly FlattenedItem[] {
+    const componentItems: FlattenedItem[] = explanation.components.map((c: ExplanationComponentProposal) => ({
+        proposedType: c.learnableType,
+        proposedText: c.text,
+        proposedTranslation: c.meaning,
+        proposedNotes: c.formula + (c.notes ? `\n${c.notes}` : ""),
+        proposedJson: jsonCloneAsRecord(c),
+    }));
+
+    const componentTexts = new Set(explanation.components.map((c) => normalizeLearnableText(c.text)));
+
+    const wordItems: FlattenedItem[] = explanation.words
+        .filter((w) => !componentTexts.has(normalizeLearnableText(w.text)))
+        .map((w: ExplanationWordProposal) => ({
             proposedType: w.learnableType,
             proposedText: w.text,
             proposedTranslation: w.meaning,
@@ -356,6 +383,74 @@ export class SentenceAnalysisService {
             ...workspace,
             items,
         };
+    }
+
+    public async explainVietnameseSentence(input: { readonly vietnameseText: string; readonly createdByUserId: string }): Promise<{
+        readonly status: "explained";
+        readonly workspace: SentenceWorkspace;
+    }> {
+        const startedAt = performance.now();
+
+        const aiStartedAt = performance.now();
+        const result = await this.analyzer.explainVietnameseSentence({
+            vietnameseText: input.vietnameseText,
+        });
+
+        logPerf("explain.ai.generateObject", {
+            provider: result.modelProvider,
+            modelId: result.modelId,
+            elapsedMs: Math.round(performance.now() - aiStartedAt),
+        });
+
+        const createWorkspaceStartedAt = performance.now();
+        const workspace = await this.workspaces.createWorkspace({
+            languageCode: "vi",
+            sourceText: input.vietnameseText,
+            sourceLanguageCode: "vi",
+            createdByUserId: input.createdByUserId,
+        });
+        logPerf("explain.createWorkspace", {
+            workspaceId: workspace.id,
+            elapsedMs: Math.round(performance.now() - createWorkspaceStartedAt),
+        });
+
+        try {
+            const flattened = flattenExplanation(result.explanation);
+            const items = flattened.map((item, index) => ({
+                ...item,
+                position: index,
+            }));
+
+            const recordAnalysisStartedAt = performance.now();
+            const saved = await this.workspaces.recordAnalysis({
+                workspaceId: workspace.id,
+                status: "analyzed",
+                analysisModelProvider: result.modelProvider,
+                analysisModelId: result.modelId,
+                analysisPromptVersion: result.promptVersion,
+                rawAnalysisJson: jsonCloneAsRecord(result.explanation),
+                summary: `${result.explanation.sentence.text} — ${result.explanation.sentence.naturalGloss}`,
+                items,
+            });
+            logPerf("explain.recordAnalysis", {
+                workspaceId: workspace.id,
+                itemCount: items.length,
+                elapsedMs: Math.round(performance.now() - recordAnalysisStartedAt),
+            });
+
+            logPerf("explain.total", {
+                workspaceId: workspace.id,
+                itemCount: items.length,
+                provider: result.modelProvider,
+                modelId: result.modelId,
+                elapsedMs: Math.round(performance.now() - startedAt),
+            });
+
+            return { status: "explained", workspace: saved };
+        } catch (error) {
+            await this.workspaces.markFailed(workspace.id, error instanceof Error ? error.message : String(error));
+            throw error;
+        }
     }
 }
 

@@ -188,6 +188,55 @@ export interface LearnableMatch {
     readonly reason: "exact" | "alias" | "lexical" | "semantic";
 }
 
+export interface ExplanationIdiom {
+    readonly text: string;
+    readonly literalMeaning: string;
+    readonly actualMeaning: string;
+    readonly notes?: string;
+}
+
+export interface ExplanationComponentProposal {
+    readonly text: string;
+    readonly meaning: string;
+    readonly literalMeaning?: string;
+    readonly formula: string;
+    readonly learnableType: "grammar_pattern" | "phrase";
+    readonly notes?: string;
+    readonly registerNotes?: string;
+    readonly exampleHints: readonly {
+        readonly exampleText: string;
+        readonly translation: string;
+    }[];
+}
+
+export interface ExplanationWordProposal {
+    readonly text: string;
+    readonly meaning: string;
+    readonly literalMeaning?: string;
+    readonly partOfSpeech?: string;
+    readonly learnableType: "vocabulary" | "utility_word";
+    readonly notes?: string;
+    readonly registerNotes?: string;
+    readonly exampleHints: readonly {
+        readonly exampleText: string;
+        readonly translation: string;
+    }[];
+}
+
+export interface SentenceExplanation {
+    readonly sentence: {
+        readonly text: string;
+        readonly naturalGloss: string;
+        readonly literalGloss?: string;
+    };
+    readonly components: readonly ExplanationComponentProposal[];
+    readonly words: readonly ExplanationWordProposal[];
+    readonly idioms: readonly ExplanationIdiom[];
+    readonly registerCommentary?: string;
+    readonly pronounNotes?: string;
+    readonly structuralNotes?: string;
+}
+
 export interface CreateLearnableInput {
     readonly languageId: LanguageId;
     readonly type: LearnableType;

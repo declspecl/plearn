@@ -10,6 +10,7 @@ import type {
     ReviewAction,
     RelatedLearnableType,
     SentenceAnalysis,
+    SentenceExplanation,
     SentenceWorkspace,
     SentenceWorkspaceId,
     UpdateLearnableInput,
@@ -108,6 +109,14 @@ export interface LearningAnalyzer {
               readonly promptVersion: string;
           }
     >;
+
+    explainVietnameseSentence(input: { vietnameseText: string }): Promise<{
+        readonly status: "explained";
+        readonly explanation: SentenceExplanation;
+        readonly modelProvider: string;
+        readonly modelId: string;
+        readonly promptVersion: string;
+    }>;
 }
 
 export interface LearningEmbedder {

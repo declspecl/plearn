@@ -485,8 +485,10 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         });
 
         if (nextWorkspaceResponse.status === "clarification_needed") {
-            setClarificationFlow((current) => [
-                ...current,
+            // Append from `activeFlow`, not `setState(prev => ...)`: parallel analyze() calls can
+            // each see an empty `prev` and append the same question twice (e.g. double-click Analyze).
+            setClarificationFlow([
+                ...activeFlow,
                 {
                     question: nextWorkspaceResponse.clarification.question,
                     options: [...nextWorkspaceResponse.clarification.options],
@@ -692,6 +694,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                         .map((option) => (
                                             <button
                                                 key={option.id}
+                                                disabled={analyzeMutation.isPending}
                                                 onClick={() => {
                                                     setFreeTextValue("");
                                                     void submitAnswer(index, option.label);
@@ -718,8 +721,9 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                                 onChange={(e) => setFreeTextValue(e.target.value)}
                                                 placeholder="Type your answer..."
                                                 className="h-8 bg-transparent"
+                                                disabled={analyzeMutation.isPending}
                                                 onKeyDown={(e) => {
-                                                    if (e.key === "Enter" && freeTextValue.trim()) {
+                                                    if (e.key === "Enter" && freeTextValue.trim() && !analyzeMutation.isPending) {
                                                         e.preventDefault();
                                                         void submitAnswer(index, freeTextValue.trim());
                                                         setFreeTextValue("");
@@ -729,7 +733,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                             <Button
                                                 size="sm"
                                                 variant="secondary"
-                                                disabled={!freeTextValue.trim()}
+                                                disabled={!freeTextValue.trim() || analyzeMutation.isPending}
                                                 onClick={() => {
                                                     void submitAnswer(index, freeTextValue.trim());
                                                     setFreeTextValue("");

@@ -35,6 +35,18 @@ export const learningRouter = createTRPCRouter({
                 createdByUserId: ctx.session.user.id,
             });
         }),
+    explainVietnameseSentence: protectedProcedure
+        .input(
+            z.object({
+                vietnameseText: z.string().min(1).max(1000),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            return ctx.services.sentenceAnalysisService.explainVietnameseSentence({
+                vietnameseText: input.vietnameseText,
+                createdByUserId: ctx.session.user.id,
+            });
+        }),
     getWorkspace: protectedProcedure
         .input(
             z.object({
