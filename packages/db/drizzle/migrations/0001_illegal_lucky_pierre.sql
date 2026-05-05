@@ -1,0 +1,1 @@
+ALTER TYPE "public"."learning_related_learnable_type" ADD VALUE 'contains_component';

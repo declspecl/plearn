@@ -583,6 +583,68 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         return rows.map((row) => this.converter.convertRelatedLearnable(row));
     }
 
+    public async listLearnableBacklinks(id: string) {
+        const rows = await this.database
+            .select()
+            .from(learningRelatedLearnables)
+            .where(and(eq(learningRelatedLearnables.toLearnableId, id), eq(learningRelatedLearnables.relationType, "contains_component")))
+            .orderBy(desc(learningRelatedLearnables.confidence));
+
+        return rows.map((row) => this.converter.convertRelatedLearnable(row));
+    }
+
+    public async findAllByNormalizedTexts(input: { languageId: string; normalizedTexts: readonly string[] }) {
+        if (input.normalizedTexts.length === 0) {
+            return [];
+        }
+
+        const rows = await this.database
+            .select()
+            .from(learningLearnables)
+            .where(
+                and(
+                    eq(learningLearnables.languageId, input.languageId),
+                    inArray(learningLearnables.normalizedText, [...input.normalizedTexts]),
+                ),
+            );
+
+        return this.hydrateLearnables(rows);
+    }
+
+    public async findAllByNormalizedTextsOrAliases(input: { languageId: string; normalizedTexts: readonly string[] }) {
+        if (input.normalizedTexts.length === 0) {
+            return [];
+        }
+
+        const textsArray = [...input.normalizedTexts];
+
+        const directRows = await this.database
+            .select()
+            .from(learningLearnables)
+            .where(and(eq(learningLearnables.languageId, input.languageId), inArray(learningLearnables.normalizedText, textsArray)));
+
+        const aliasRows = await this.database
+            .select()
+            .from(learningLearnableAliases)
+            .where(
+                and(
+                    eq(learningLearnableAliases.languageId, input.languageId),
+                    inArray(learningLearnableAliases.normalizedAliasText, textsArray),
+                ),
+            );
+
+        const aliasLearnableIds = aliasRows.map((row) => row.learnableId).filter((id) => !directRows.some((row) => row.id === id));
+
+        const aliasLearnableRows =
+            aliasLearnableIds.length > 0
+                ? await this.database.select().from(learningLearnables).where(inArray(learningLearnables.id, aliasLearnableIds))
+                : [];
+
+        const uniqueById = new Map([...directRows, ...aliasLearnableRows].map((row) => [row.id, row]));
+
+        return this.hydrateLearnables([...uniqueById.values()]);
+    }
+
     public async listAllRelatedLearnables(languageId: string) {
         const rows = await this.database
             .select({

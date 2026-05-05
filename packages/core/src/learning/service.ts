@@ -1,6 +1,7 @@
 import type {
     ComponentProposal,
     Language,
+    LanguageId,
     Learnable,
     LearnableId,
     LearnableMatch,
@@ -618,6 +619,47 @@ export class WorkspaceReviewService {
                 confidence: clampConfidence(relation.confidence),
             })),
         );
+
+        await this.computeComponentRelations(workspace.languageId, savedLearnables);
+    }
+
+    private async computeComponentRelations(languageId: LanguageId, learnables: readonly Learnable[]) {
+        const componentRelations: {
+            fromLearnableId: LearnableId;
+            toLearnableId: LearnableId;
+            relationType: RelatedLearnableType;
+            confidence: number;
+        }[] = [];
+
+        for (const learnable of learnables) {
+            const words = learnable.normalizedText.trim().split(/\s+/);
+            if (words.length < 2) continue;
+
+            const subphrases: string[] = [];
+            for (let start = 0; start < words.length; start++) {
+                for (let len = 1; len <= words.length - start; len++) {
+                    if (start === 0 && len === words.length) continue;
+                    subphrases.push(words.slice(start, start + len).join(" "));
+                }
+            }
+
+            const unique = [...new Set(subphrases)];
+            const matches = await this.learnables.findAllByNormalizedTexts({ languageId, normalizedTexts: unique });
+
+            for (const match of matches) {
+                if (match.id === learnable.id) continue;
+                componentRelations.push({
+                    fromLearnableId: learnable.id,
+                    toLearnableId: match.id,
+                    relationType: "contains_component",
+                    confidence: 1,
+                });
+            }
+        }
+
+        if (componentRelations.length > 0) {
+            await this.learnables.upsertRelatedLearnables(componentRelations);
+        }
     }
 }
 
@@ -659,6 +701,26 @@ export class LearnableCatalogService {
 
     public listRelatedLearnables(learnableId: LearnableId) {
         return this.learnables.listRelatedLearnables(learnableId);
+    }
+
+    public listLearnableBacklinks(learnableId: LearnableId) {
+        return this.learnables.listLearnableBacklinks(learnableId);
+    }
+
+    public async annotateText(languageCode: string, text: string): Promise<readonly Learnable[]> {
+        const language = await this.learnables.findLanguageByCode(languageCode);
+        if (!language) return [];
+
+        const words = normalizeLearnableText(text).split(/\s+/).filter(Boolean);
+        const subphrases: string[] = [];
+        for (let start = 0; start < words.length; start++) {
+            for (let len = 1; len <= words.length - start; len++) {
+                subphrases.push(words.slice(start, start + len).join(" "));
+            }
+        }
+
+        const unique = [...new Set(subphrases)];
+        return this.learnables.findAllByNormalizedTextsOrAliases({ languageId: language.id, normalizedTexts: unique });
     }
 
     public async getLearnableGraph(

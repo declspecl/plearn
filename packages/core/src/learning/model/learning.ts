@@ -45,7 +45,13 @@ export type SuggestionStatus = (typeof suggestionStatuses)[number];
 export const exampleSources = ["ai", "sentence_observed", "manual"] as const;
 export type ExampleSource = (typeof exampleSources)[number];
 
-export const relatedLearnableTypes = ["similar_meaning", "same_pattern_family", "often_confused", "related_phrase"] as const;
+export const relatedLearnableTypes = [
+    "similar_meaning",
+    "same_pattern_family",
+    "often_confused",
+    "related_phrase",
+    "contains_component",
+] as const;
 export type RelatedLearnableType = (typeof relatedLearnableTypes)[number];
 
 export interface Language {

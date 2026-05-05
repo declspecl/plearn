@@ -70,11 +70,12 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             model: getAnalysisModel(),
             schema: analysisSchema,
             prompt: [
-                "You are decomposing an English sentence into Vietnamese learning units.",
+                "You are decomposing an English sentence into Southern Vietnamese learning units.",
+                "Use Southern Vietnamese specifically: prefer common Southern words, particles, pronouns, everyday phrasing, and regional nuances. Avoid defaulting to Northern or overly formal textbook Vietnamese unless the input explicitly requires that register.",
                 "Return 3 sections:",
-                "1. sentence: the full Vietnamese translation with its English meaning.",
-                "2. components: phrases, structures, and grammar patterns. Each has Vietnamese text, English meaning, and a formula showing how to construct/use the pattern (e.g. 'Subject + đang + Verb'). Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for idiomatic phrases. For the formula field: describe usage, position, or structure — never just repeat the Vietnamese text itself.",
-                "3. words: individual Vietnamese words/graphemes with their English meaning and part of speech. Set learnableType to 'vocabulary' for content words or 'utility_word' for function words (particles, conjunctions, etc.). Do not include a word in both components and words — if it appears as a component, omit it from words.",
+                "1. sentence: the full Southern Vietnamese translation with its English meaning.",
+                "2. components: phrases, structures, and grammar patterns. Each has Southern Vietnamese text, English meaning, and a formula showing how to construct/use the pattern (e.g. 'Subject + đang + Verb'). Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for idiomatic phrases. For the formula field: describe usage, position, or structure — never just repeat the Vietnamese text itself.",
+                "3. words: individual Southern Vietnamese words/graphemes with their English meaning and part of speech. Set learnableType to 'vocabulary' for content words or 'utility_word' for function words (particles, conjunctions, etc.). Do not include a word in both components and words — if it appears as a component, omit it from words.",
                 "Do not invent duplicate items unless they are genuinely different learnable concepts.",
                 `Target language code: ${input.languageCode}`,
                 `Sentence: ${input.sourceText}`,
@@ -85,7 +86,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             analysis: result.object,
             modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
             modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-            promptVersion: "v2",
+            promptVersion: "v3",
         };
     }
 }

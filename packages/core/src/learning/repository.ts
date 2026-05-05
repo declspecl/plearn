@@ -140,7 +140,13 @@ export interface LearnableRepository {
     updateLearnable(id: LearnableId, input: UpdateLearnableInput): Promise<Learnable>;
     touchLearnable(id: LearnableId, now: Date): Promise<Learnable>;
     listRelatedLearnables(id: LearnableId): Promise<readonly RelatedLearnable[]>;
+    listLearnableBacklinks(id: LearnableId): Promise<readonly RelatedLearnable[]>;
     listAllRelatedLearnables(languageId: Language["id"]): Promise<readonly RelatedLearnable[]>;
+    findAllByNormalizedTexts(input: { languageId: Language["id"]; normalizedTexts: readonly string[] }): Promise<readonly Learnable[]>;
+    findAllByNormalizedTextsOrAliases(input: {
+        languageId: Language["id"];
+        normalizedTexts: readonly string[];
+    }): Promise<readonly Learnable[]>;
     upsertRelatedLearnables(
         relations: readonly {
             readonly fromLearnableId: LearnableId;

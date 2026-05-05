@@ -1,7 +1,8 @@
+import { SentenceSearchForm } from "./_components/sentence-search-form";
+import { AnnotatedVietnameseText } from "@/components/learning/annotated-vietnamese-text";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
 import { performance } from "node:perf_hooks";
-import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 interface SentenceHistoryPageProps {
@@ -32,23 +33,7 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="border-border bg-card max-w-2xl space-y-3 rounded-2xl border p-4" method="get">
-                        <label className="text-muted-foreground block text-sm font-medium">Keyword Search</label>
-                        <input
-                            className="border-input bg-background focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border px-4 py-3 transition-all outline-none focus:ring-1"
-                            defaultValue={params.q}
-                            name="q"
-                            placeholder="Search by Vietnamese sentence or English summary..."
-                        />
-                        <div className="flex flex-wrap gap-2">
-                            <Button type="submit">Search</Button>
-                            {params.q ? (
-                                <Button render={<Link href="/tools/vietnamese/sentences" />} type="button" variant="secondary">
-                                    Clear Filter
-                                </Button>
-                            ) : null}
-                        </div>
-                    </form>
+                    <SentenceSearchForm />
                 </CardContent>
             </Card>
 
@@ -66,7 +51,7 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
                             <Card className="hover:border-ring border-l-primary/30 hover:border-l-primary border-l-4 transition hover:-translate-y-0.5">
                                 <CardHeader>
                                     <CardTitle className="text-2xl font-[var(--font-display)] tracking-[-0.03em]">
-                                        {workspace.sourceText}
+                                        <AnnotatedVietnameseText text={workspace.sourceText} />
                                     </CardTitle>
                                     <CardDescription className="text-base">{workspace.summary ?? workspace.status}</CardDescription>
                                 </CardHeader>

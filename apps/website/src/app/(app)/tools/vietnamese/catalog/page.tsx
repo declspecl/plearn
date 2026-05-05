@@ -1,10 +1,11 @@
+import { CatalogSearchForm } from "./_components/catalog-search-form";
 import { LearnableBadge } from "@/components/learning/learnable-badge";
+import { LearnableHoverText } from "@/components/learning/learnable-hover-text";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import { learnableTypes, type LearnableType } from "@plearn/core/learning/model";
 import Link from "next/link";
 import { performance } from "node:perf_hooks";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 interface CatalogPageProps {
@@ -50,34 +51,8 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                         Search your Vietnamese compendium by exact wording, English gloss, usage notes, or semantic neighborhood.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-4 lg:grid-cols-2">
-                    <form className="border-border bg-card space-y-3 rounded-2xl border p-4" method="get">
-                        <label className="text-muted-foreground block text-sm font-medium">Keyword Search</label>
-                        <input
-                            className="border-input bg-background w-full rounded-xl border px-4 py-3 outline-none"
-                            defaultValue={params.q}
-                            name="q"
-                            placeholder="Search by phrase, translation, or notes"
-                        />
-                        <div className="flex flex-wrap gap-2">
-                            <Button type="submit">Search</Button>
-                            <Button render={<Link href="/tools/vietnamese/catalog" />} type="button" variant="secondary">
-                                Reset
-                            </Button>
-                        </div>
-                    </form>
-                    <form className="border-border bg-card space-y-3 rounded-2xl border p-4" method="get">
-                        <label className="text-muted-foreground block text-sm font-medium">Semantic Search</label>
-                        <input
-                            className="border-input bg-background w-full rounded-xl border px-4 py-3 outline-none"
-                            defaultValue={params.semantic}
-                            name="semantic"
-                            placeholder="Find similar words by meaning or purpose"
-                        />
-                        <Button type="submit" variant="secondary">
-                            Find Similar
-                        </Button>
-                    </form>
+                <CardContent>
+                    <CatalogSearchForm />
                 </CardContent>
             </Card>
 
@@ -96,7 +71,18 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                                             <LearnableBadge type={match.learnable.type} />
                                             <span className="text-muted-foreground text-xs">{Math.round(match.confidence * 100)}%</span>
                                         </div>
-                                        <CardTitle>{match.learnable.canonicalText}</CardTitle>
+                                        <CardTitle>
+                                            <LearnableHoverText
+                                                hint={{
+                                                    text: match.learnable.canonicalText,
+                                                    translation: match.learnable.translation,
+                                                    type: match.learnable.type,
+                                                    notes: match.learnable.usageNotes,
+                                                    formula: match.learnable.patternTemplate,
+                                                    exampleHints: match.learnable.examples.slice(0, 2),
+                                                }}
+                                            />
+                                        </CardTitle>
                                         <CardDescription>{match.learnable.translation}</CardDescription>
                                     </CardHeader>
                                 </Card>
@@ -125,7 +111,16 @@ export default async function VietnameseCatalogPage({ searchParams }: CatalogPag
                                         <Badge variant="secondary">{learnable.occurrenceCount}x</Badge>
                                     </div>
                                     <CardTitle className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">
-                                        {learnable.canonicalText}
+                                        <LearnableHoverText
+                                            hint={{
+                                                text: learnable.canonicalText,
+                                                translation: learnable.translation,
+                                                type: learnable.type,
+                                                notes: learnable.usageNotes,
+                                                formula: learnable.patternTemplate,
+                                                exampleHints: learnable.examples.slice(0, 2),
+                                            }}
+                                        />
                                     </CardTitle>
                                     <CardDescription>{learnable.translation}</CardDescription>
                                 </CardHeader>

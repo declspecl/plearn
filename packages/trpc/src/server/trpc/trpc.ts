@@ -64,11 +64,15 @@ export const createTRPCContext = async ({
 const t = initTRPC.context<TRPCContext>().create({
     transformer: SuperJSON,
     errorFormatter({ shape, error }) {
+        const cause = error.cause;
+        if (cause && typeof cause === "object" && "cause" in cause && cause.cause) {
+            console.error("[TRPC] DB error cause:", (cause.cause as Error).message);
+        }
         return {
             ...shape,
             data: {
                 ...shape.data,
-                zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+                zodError: cause instanceof ZodError ? cause.flatten() : null,
             },
         };
     },

@@ -49,7 +49,7 @@ function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly A
             const itemLower = item.text.toLowerCase();
             if (lower.startsWith(itemLower)) {
                 const nextChar = remaining[item.text.length];
-                if (!nextChar || /\s/.test(nextChar)) {
+                if (!nextChar || /[\s,.\-!?;:"""''()[\]{}…]/.test(nextChar)) {
                     spans.push({ text: remaining.slice(0, item.text.length), wordInfo: item });
                     remaining = remaining.slice(item.text.length);
                     matched = true;
@@ -88,7 +88,7 @@ function PulsingDots() {
     );
 }
 
-function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: WordInfo; text: string; enabled: boolean }) {
+export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: WordInfo; text: string; enabled: boolean }) {
     const catalogQuery = api.learning.lookupByText.useQuery({ languageCode: "vi", text: wordInfo.text }, { staleTime: 60_000, enabled });
 
     const catalogData = catalogQuery.data;

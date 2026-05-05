@@ -76,6 +76,7 @@ describe("WorkspaceReviewService", () => {
                     mergeTargetLearnableId: existingLearnable.id,
                     position: 0,
                     duplicateSuggestions: [],
+                    suggestionsStatus: "idle",
                 },
             ],
         };
@@ -88,6 +89,8 @@ describe("WorkspaceReviewService", () => {
             markSaved: vi.fn(async () => workspace),
             findWorkspaceById: vi.fn(async () => workspace),
             listWorkspaces: vi.fn(),
+            setWorkspaceItemSuggestions: vi.fn(),
+            setWorkspaceItemSuggestionStatus: vi.fn(),
         };
         const learnables: LearnableRepository = {
             findLanguageByCode: vi.fn(),
@@ -103,6 +106,11 @@ describe("WorkspaceReviewService", () => {
             })),
             touchLearnable: vi.fn(),
             listRelatedLearnables: vi.fn(),
+            listLearnableBacklinks: vi.fn(),
+            listAllRelatedLearnables: vi.fn(),
+            findAllByNormalizedTexts: vi.fn(async () => []),
+            findAllByNormalizedTextsOrAliases: vi.fn(async () => []),
+            upsertRelatedLearnables: vi.fn(),
         };
         const occurrences: OccurrenceRepository = {
             createOccurrence: vi.fn(async () => ({
@@ -114,10 +122,12 @@ describe("WorkspaceReviewService", () => {
                 createdAt: new Date(),
             })),
             listOccurrencesForLearnable: vi.fn(),
+            listOccurrencesForLanguage: vi.fn(),
         };
         const search: LearningSearchRepository = {
             findLexicalMatches: vi.fn(),
             findSemanticMatches: vi.fn(),
+            findLexicalMatchesBatch: vi.fn(),
         };
         const embedder: LearningEmbedder = {
             buildEmbeddingSourceText: vi.fn(),

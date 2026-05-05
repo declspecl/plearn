@@ -45,6 +45,7 @@ export const RELATION_DASH_PATTERNS: Record<RelatedLearnableType, string | undef
     similar_meaning: "4 4",
     often_confused: "2 5",
     related_phrase: "10 5 2 5",
+    contains_component: "6 3",
 };
 
 export const GRAPH_FORCE_CONFIG = {

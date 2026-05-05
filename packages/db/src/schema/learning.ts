@@ -11,6 +11,7 @@ export const relatedLearnableTypeEnum = pgEnum("learning_related_learnable_type"
     "same_pattern_family",
     "often_confused",
     "related_phrase",
+    "contains_component",
 ]);
 
 export const learningLanguages = pgTable(

@@ -144,6 +144,25 @@ export const learningRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             return ctx.services.learnableCatalogService.listRelatedLearnables(input.learnableId);
         }),
+    getLearnableBacklinks: protectedProcedure
+        .input(
+            z.object({
+                learnableId: z.string().transform((value) => createLearnableId(value)),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.learnableCatalogService.listLearnableBacklinks(input.learnableId);
+        }),
+    annotateText: protectedProcedure
+        .input(
+            z.object({
+                languageCode: z.string().min(2),
+                text: z.string().min(1),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.learnableCatalogService.annotateText(input.languageCode, input.text);
+        }),
     getLearnableGraph: protectedProcedure
         .input(
             z.object({
