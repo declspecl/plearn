@@ -24,8 +24,8 @@ export function SignOutButton() {
     }
 
     return (
-        <Button disabled={isPending} onClick={handleSignOut} size="sm" variant="secondary">
-            {isPending ? "Leaving..." : "Sign Out"}
+        <Button className="rounded-full px-3" disabled={isPending} onClick={handleSignOut} size="sm" variant="secondary">
+            {isPending ? "Leaving..." : "Sign out"}
         </Button>
     );
 }

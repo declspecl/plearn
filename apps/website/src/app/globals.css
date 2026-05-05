@@ -81,64 +81,41 @@
 }
 
 :root {
-    color-scheme: light;
+    color-scheme: dark;
     --radius: 0.625rem;
-    --background: var(--color-white);
+    --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
     --app-chrome-background: var(--background);
-    --foreground: var(--color-neutral-800);
-    --card: var(--color-white);
-    --card-foreground: var(--color-neutral-800);
-    --popover: var(--color-white);
-    --popover-foreground: var(--color-neutral-800);
-    --primary: oklch(0.488 0.217 264);
+    --foreground: var(--color-neutral-100);
+    --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
+    --card-foreground: var(--foreground);
+    --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
+    --popover-foreground: var(--foreground);
+    --primary: oklch(0.588 0.217 264);
     --primary-foreground: var(--color-white);
-    --secondary: --alpha(var(--color-black) / 4%);
-    --secondary-foreground: var(--color-neutral-800);
-    --muted: --alpha(var(--color-black) / 4%);
-    --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-black));
-    --accent: --alpha(var(--color-black) / 4%);
-    --accent-foreground: var(--color-neutral-800);
-    --destructive: var(--color-red-500);
-    --border: --alpha(var(--color-black) / 8%);
-    --input: --alpha(var(--color-black) / 10%);
-    --ring: oklch(0.488 0.217 264);
-    --destructive-foreground: var(--color-red-700);
+    --secondary: --alpha(var(--color-white) / 4%);
+    --secondary-foreground: var(--foreground);
+    --muted: --alpha(var(--color-white) / 4%);
+    --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
+    --accent: --alpha(var(--color-white) / 4%);
+    --accent-foreground: var(--foreground);
+    --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
+    --border: --alpha(var(--color-white) / 6%);
+    --input: --alpha(var(--color-white) / 8%);
+    --ring: oklch(0.588 0.217 264);
+    --destructive-foreground: var(--color-red-300);
     --info: var(--color-blue-500);
-    --info-foreground: var(--color-blue-700);
+    --info-foreground: var(--color-blue-400);
     --success: var(--color-emerald-500);
-    --success-foreground: var(--color-emerald-700);
+    --success-foreground: var(--color-emerald-300);
     --warning: var(--color-amber-500);
-    --warning-foreground: var(--color-amber-700);
-
-    @variant dark {
-        color-scheme: dark;
-        --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
-        --app-chrome-background: var(--background);
-        --foreground: var(--color-neutral-100);
-        --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
-        --card-foreground: var(--color-neutral-100);
-        --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
-        --popover-foreground: var(--color-neutral-100);
-        --primary: oklch(0.588 0.217 264);
-        --primary-foreground: var(--color-white);
-        --secondary: --alpha(var(--color-white) / 4%);
-        --secondary-foreground: var(--color-neutral-100);
-        --muted: --alpha(var(--color-white) / 4%);
-        --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
-        --accent: --alpha(var(--color-white) / 4%);
-        --accent-foreground: var(--color-neutral-100);
-        --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
-        --border: --alpha(var(--color-white) / 6%);
-        --input: --alpha(var(--color-white) / 8%);
-        --ring: oklch(0.588 0.217 264);
-        --destructive-foreground: var(--color-red-400);
-        --info: var(--color-blue-500);
-        --info-foreground: var(--color-blue-400);
-        --success: var(--color-emerald-500);
-        --success-foreground: var(--color-emerald-400);
-        --warning: var(--color-amber-500);
-        --warning-foreground: var(--color-amber-400);
-    }
+    --warning-foreground: var(--color-amber-300);
+    --plearn-bg-2: color-mix(in srgb, var(--background) 98%, var(--color-white));
+    --plearn-bg-3: color-mix(in srgb, var(--background) 94%, var(--color-white));
+    --plearn-line-soft: --alpha(var(--color-white) / 10%);
+    --plearn-ink-3: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
+    --plearn-ink-4: color-mix(in srgb, var(--color-neutral-500) 72%, var(--color-white));
+    --plearn-green: oklch(0.72 0.07 165);
+    --plearn-amber: oklch(0.76 0.08 78);
 }
 
 body {
@@ -178,6 +155,69 @@ body::after {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-repeat: repeat;
     background-size: 256px 256px;
+}
+
+.plearn-shell {
+    background: var(--background);
+}
+
+.plearn-page {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+.plearn-eyebrow {
+    font-family: var(--font-sans), sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    color: var(--plearn-ink-3);
+}
+
+.plearn-panel {
+    border: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 94%, black);
+    border-radius: 0.9rem;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.2);
+}
+
+.plearn-title {
+    font-family: var(--font-display), serif;
+    font-size: clamp(2.5rem, 3vw, 3.75rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+}
+
+.plearn-copy {
+    color: var(--muted-foreground);
+    line-height: 1.7;
+}
+
+.plearn-divider-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.plearn-divider-heading > .name {
+    font-family: var(--font-sans), sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+    color: var(--plearn-ink-3);
+}
+
+.plearn-divider-heading > .count {
+    font-size: 0.8rem;
+    color: var(--plearn-ink-4);
+}
+
+@media (min-width: 768px) {
+    .plearn-page {
+        padding: 3rem 2.5rem 5rem;
+    }
 }
 
 pre,

@@ -4,7 +4,10 @@ import { AppSidebarContent } from "./app-sidebar-content";
 import { SiteLogo } from "@/components/brand/site-logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetPopup, SheetTrigger } from "@/components/ui/sheet";
-import { List } from "@phosphor-icons/react";
+import { ChartLineUp, House, List, ListMagnifyingGlass, Stack } from "@phosphor-icons/react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "~/lib/utils";
 
 interface MobileNavProps {
     user: {
@@ -14,19 +17,53 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ user }: MobileNavProps) {
+    const pathname = usePathname();
+    const showTabs = pathname.startsWith("/tools/vietnamese");
+    const tabs = [
+        { href: "/tools/vietnamese", label: "Hub", icon: House, active: pathname === "/tools/vietnamese" },
+        { href: "/tools/vietnamese/analyze", label: "Analyze", icon: ListMagnifyingGlass, active: pathname.includes("/analyze") },
+        { href: "/tools/vietnamese/catalog", label: "Catalog", icon: Stack, active: pathname.includes("/catalog") },
+        { href: "/tools/vietnamese/sentences", label: "History", icon: ListMagnifyingGlass, active: pathname.includes("/sentences") },
+        { href: "/tools/vietnamese/insights", label: "Stats", icon: ChartLineUp, active: pathname.includes("/insights") },
+    ];
+
     return (
-        <header className="border-border bg-card/50 sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur-md md:hidden">
-            <div className="flex items-center gap-3">
-                <Sheet>
-                    <SheetTrigger render={<Button variant="ghost" size="icon" className="-ml-2" />}>
-                        <List weight="bold" className="size-5" />
-                    </SheetTrigger>
-                    <SheetPopup side="left" className="flex w-64 flex-col justify-between p-0" showCloseButton={false}>
-                        <AppSidebarContent user={user} />
-                    </SheetPopup>
-                </Sheet>
-                <SiteLogo variant="sm" priority />
-            </div>
-        </header>
+        <>
+            <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--plearn-line-soft)] bg-black/20 px-4 backdrop-blur-md md:hidden">
+                <div className="flex items-center gap-3">
+                    <Sheet>
+                        <SheetTrigger render={<Button variant="ghost" size="icon" className="-ml-2" />}>
+                            <List weight="bold" className="size-5" />
+                        </SheetTrigger>
+                        <SheetPopup
+                            side="left"
+                            className="flex w-64 flex-col justify-between border-r border-[color:var(--plearn-line-soft)] bg-[color:var(--background)] p-0"
+                            showCloseButton={false}
+                        >
+                            <AppSidebarContent user={user} />
+                        </SheetPopup>
+                    </Sheet>
+                    <SiteLogo variant="sm" priority />
+                </div>
+            </header>
+
+            {showTabs ? (
+                <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 flex border-t border-[color:var(--plearn-line-soft)] bg-[color:color-mix(in_oklch,var(--background)_95%,black)] md:hidden">
+                    {tabs.map(({ href, label, icon: Icon, active }) => (
+                        <Link
+                            key={href}
+                            href={href}
+                            className={cn(
+                                "flex flex-1 flex-col items-center gap-1 px-2 py-3 text-[10px]",
+                                active ? "text-foreground" : "text-[color:var(--plearn-ink-4)]",
+                            )}
+                        >
+                            <Icon weight={active ? "fill" : "duotone"} className="size-4" />
+                            {label}
+                        </Link>
+                    ))}
+                </nav>
+            ) : null}
+        </>
     );
 }

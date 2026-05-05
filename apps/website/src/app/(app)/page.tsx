@@ -1,5 +1,5 @@
 import { ArtisanVietnameseLandmark } from "./_components/artisan-vietnamese-landmark";
-import { ArrowRight, Plus } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -14,8 +14,7 @@ export default function HomePage() {
                 </p>
             </header>
 
-            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 xl:grid-cols-3">
-                {/* Vietnamese Tool Card */}
+            <section className="grid grid-cols-1 gap-6">
                 <Link
                     href="/tools/vietnamese"
                     className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md xl:col-span-2"
@@ -35,17 +34,6 @@ export default function HomePage() {
                         </p>
                     </div>
                 </Link>
-
-                {/* Placeholder for Future Tool */}
-                <div className="border-border bg-accent/30 hover:bg-accent/50 flex min-h-[300px] cursor-default flex-col items-center justify-center gap-4 rounded-[2rem] border border-dashed p-8 text-center transition-colors">
-                    <div className="bg-background text-muted-foreground rounded-full p-4 shadow-sm">
-                        <Plus className="size-6" weight="duotone" />
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-foreground font-medium">New Tool Module</p>
-                        <p className="text-muted-foreground text-sm">System expansion pending</p>
-                    </div>
-                </div>
             </section>
         </div>
     );

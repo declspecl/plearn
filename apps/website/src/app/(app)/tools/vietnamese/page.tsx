@@ -1,105 +1,124 @@
 import { ArtisanWorkbenchBanner } from "./_components/artisan-workbench-banner";
+import { relativeTime } from "@/lib/format";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
-import { ArrowRight, ChartLineUp, ListMagnifyingGlass, Stack } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import { cn } from "~/lib/utils";
 
 export default async function VietnameseToolPage() {
     const caller = await createTRPCCaller();
     const [learnables, workspaces] = await Promise.all([
         caller.learning.listLearnables({
             languageCode: "vi",
-            limit: 3,
+            limit: 100,
             sort: "frequency",
         }),
         caller.learning.listSentenceWorkspaces({
             languageCode: "vi",
+            limit: 6,
         }),
     ]);
 
+    const latestWorkspace = workspaces[0];
+    const recentFeed = workspaces.slice(0, 6);
+    const streakDates = new Set(workspaces.map((workspace) => workspace.createdAt.toISOString().slice(0, 10)).slice(0, 14));
+    const streak = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - index));
+
+        return streakDates.has(date.toISOString().slice(0, 10));
+    });
+
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 md:gap-12 md:px-8 md:py-12">
-            {/* The Open-Air Header */}
-            <header className="space-y-4">
-                <h1 className="text-foreground text-4xl leading-tight font-[var(--font-display)] tracking-[-0.05em] md:text-5xl">
-                    The Translator&apos;s Workbench
-                </h1>
-                <div className="text-muted-foreground flex items-center gap-3 font-mono text-xs">
-                    <span>Catalog: {learnables.length} Items</span>
-                    <span className="bg-border h-1 w-1 rounded-full" />
-                    <span>Active Workspaces: {workspaces.length}</span>
-                </div>
+        <div className="plearn-page">
+            <header className="max-w-4xl space-y-3">
+                <p className="plearn-eyebrow">Vietnamese · Hub</p>
+                <p className="text-[2rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em] text-balance md:text-[2.3rem]">
+                    {latestWorkspace?.summary ?? "Your latest sentence will live here once you decompose it."}
+                </p>
+                {latestWorkspace ? (
+                    <p className="text-sm text-[color:var(--plearn-ink-4)]">
+                        From your last decomposition · {relativeTime(latestWorkspace.createdAt.toISOString())} ·{" "}
+                        <Link href={`/tools/vietnamese/sentences/${latestWorkspace.id}`} className="text-primary no-underline">
+                            revisit →
+                        </Link>
+                    </p>
+                ) : null}
             </header>
 
-            {/* Primary CTA */}
-            <ArtisanWorkbenchBanner />
+            <div className="mt-8">
+                <ArtisanWorkbenchBanner />
+            </div>
 
-            {/* The Module Grid */}
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-                {/* The Lexicon (Catalog) */}
-                <Link
-                    href="/tools/vietnamese/catalog"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
-                >
-                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
-                        <Stack weight="duotone" className="size-6" />
+            <section className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
+                <div>
+                    <div className="plearn-divider-heading mb-4">
+                        <span className="name">Where you left off</span>
+                        <span className="count">last {recentFeed.length}</span>
                     </div>
-                    <div className="flex-1 space-y-2">
-                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Lexicon</h2>
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                            Your semantic catalog of vocabulary, grammar, and phrases extracted from inner monologues.
+                    <div className="space-y-2">
+                        {recentFeed.map((workspace) => (
+                            <Link
+                                key={workspace.id}
+                                href={`/tools/vietnamese/sentences/${workspace.id}`}
+                                className="plearn-panel hover:border-primary/60 grid gap-3 px-4 py-3 transition-colors md:grid-cols-[90px_1fr_auto] md:items-center"
+                            >
+                                <span className="text-sm text-[color:var(--plearn-ink-4)]">
+                                    {relativeTime(workspace.createdAt.toISOString())}
+                                </span>
+                                <span className="text-sm text-[color:var(--muted-foreground)]">
+                                    Analyzed{" "}
+                                    <span className="text-foreground text-base font-[var(--font-display)]">{workspace.sourceText}</span>
+                                </span>
+                                <span className="justify-self-start rounded-full border border-[color:var(--border)] px-3 py-1 text-sm text-[color:var(--plearn-ink-3)] md:justify-self-end">
+                                    Decomposition
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="plearn-panel p-5">
+                        <p className="text-sm text-[color:var(--plearn-ink-3)]">Streak</p>
+                        <p className="mt-2 text-5xl leading-none font-[var(--font-display)] tracking-[-0.04em]">
+                            {streak.filter(Boolean).length}
+                            <span className="ml-2 font-sans text-sm text-[color:var(--plearn-ink-3)]">days</span>
                         </p>
-                    </div>
-                    <div className="border-border border-t pt-4">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground font-medium">View Catalog</span>
-                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
+                        <div className="mt-4 grid grid-cols-7 gap-1.5">
+                            {streak.map((active, index) => (
+                                <span
+                                    key={index}
+                                    className={cn(
+                                        "h-3 rounded-sm",
+                                        active ? "bg-[color:var(--plearn-green)]" : "bg-[color:var(--plearn-bg-3)]",
+                                    )}
+                                />
+                            ))}
                         </div>
                     </div>
-                </Link>
 
-                {/* The Ledger (History) */}
-                <Link
-                    href="/tools/vietnamese/sentences"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
-                >
-                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
-                        <ListMagnifyingGlass weight="duotone" className="size-6" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Ledger</h2>
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                            A chronological archive of your sentence workspaces and structural decompositions.
+                    <div className="plearn-panel p-5">
+                        <p className="text-sm text-[color:var(--plearn-ink-3)]">Catalog</p>
+                        <p className="mt-2 text-3xl font-[var(--font-display)] tracking-[-0.03em]">
+                            {learnables.length}
+                            <span className="ml-2 font-sans text-sm text-[color:var(--plearn-ink-3)]">entries</span>
                         </p>
-                    </div>
-                    <div className="border-border border-t pt-4">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground font-medium">View History</span>
-                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            <Link
+                                href="/tools/vietnamese/analyze"
+                                className="text-primary rounded border border-[color:var(--border)] px-3 py-2 text-sm"
+                            >
+                                Analyze
+                            </Link>
+                            <Link
+                                href="/tools/vietnamese/catalog"
+                                className="text-primary rounded border border-[color:var(--border)] px-3 py-2 text-sm"
+                            >
+                                Catalog
+                            </Link>
                         </div>
                     </div>
-                </Link>
-
-                {/* The Pulse (Insights) */}
-                <Link
-                    href="/tools/vietnamese/insights"
-                    className="group border-border bg-card hover:border-primary/30 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md md:p-8"
-                >
-                    <div className="bg-accent text-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-12 w-12 items-center justify-center rounded-2xl transition-colors">
-                        <ChartLineUp weight="duotone" className="size-6" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <h2 className="text-foreground text-2xl font-[var(--font-display)] tracking-[-0.03em]">The Pulse</h2>
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                            System analytics, frequency charts, and trajectory of your learning progress.
-                        </p>
-                    </div>
-                    <div className="border-border border-t pt-4">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground font-medium">View Insights</span>
-                            <ArrowRight className="text-muted-foreground group-hover:text-primary size-4 transition-transform group-hover:translate-x-1" />
-                        </div>
-                    </div>
-                </Link>
+                </div>
             </section>
         </div>
     );

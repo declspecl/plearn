@@ -3,81 +3,89 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 
 export function CatalogSearchForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isPending, startTransition] = useTransition();
+    const currentMode = searchParams.get("mode") === "meaning" ? "meaning" : "match";
+    const currentQuery = searchParams.get("q") ?? searchParams.get("semantic") ?? "";
+    const [mode, setMode] = useState<"match" | "meaning">(currentMode);
+    const [query, setQuery] = useState(currentQuery);
+    const isLoading = isPending || query !== currentQuery || mode !== currentMode;
 
-    const [keyword, setKeyword] = useState(searchParams.get("q") ?? "");
-    const [semantic, setSemantic] = useState(searchParams.get("semantic") ?? "");
-
-    const keywordDirty = keyword !== (searchParams.get("q") ?? "");
-    const semanticDirty = semantic !== (searchParams.get("semantic") ?? "");
-    const keywordLoading = keywordDirty || isPending;
-    const semanticLoading = semanticDirty || isPending;
+    useEffect(() => {
+        setMode(currentMode);
+        setQuery(currentQuery);
+    }, [currentMode, currentQuery]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             const params = new URLSearchParams(searchParams.toString());
-            if (keyword) {
-                params.set("q", keyword);
+            if (query) {
+                params.set("q", query);
             } else {
                 params.delete("q");
             }
-            startTransition(() => {
-                router.push(`?${params.toString()}`);
-            });
-        }, 400);
-        return () => clearTimeout(timer);
-    }, [keyword]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const params = new URLSearchParams(searchParams.toString());
-            if (semantic) {
-                params.set("semantic", semantic);
-            } else {
-                params.delete("semantic");
+            params.delete("semantic");
+            params.set("mode", mode);
+            const nextQueryString = params.toString();
+            if (nextQueryString === searchParams.toString()) {
+                return;
             }
             startTransition(() => {
-                router.push(`?${params.toString()}`);
+                router.replace(`?${nextQueryString}`, { scroll: false });
             });
         }, 400);
+
         return () => clearTimeout(timer);
-    }, [semantic]);
+    }, [mode, query, router, searchParams]);
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="border-border bg-card space-y-3 rounded-2xl border p-4">
-                <label className="text-muted-foreground block text-sm font-medium">Keyword Search</label>
-                <div className="relative">
-                    <input
-                        className="border-input bg-background w-full rounded-xl border px-4 py-3 pr-10 outline-none"
-                        value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
-                        placeholder="Search by phrase, translation, or notes"
-                    />
-                    {keywordLoading && <Spinner className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2" />}
-                </div>
-                <Button render={<Link href="/tools/vietnamese/catalog" />} type="button" variant="secondary" onClick={() => setKeyword("")}>
+        <div className="plearn-panel flex items-stretch overflow-hidden">
+            <div className="relative flex-1">
+                <input
+                    className="w-full bg-transparent px-4 py-4 pr-10 text-sm outline-none placeholder:text-[color:var(--plearn-ink-4)]"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search words, phrases, or meanings…"
+                />
+                {isLoading ? <Spinner className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2" /> : null}
+            </div>
+            <div className="flex border-l border-[color:var(--border)] bg-[color:var(--plearn-bg-3)] p-1">
+                <button
+                    className={
+                        mode === "match"
+                            ? "rounded-md bg-[color:var(--background)] px-3 py-2 text-sm"
+                            : "px-3 py-2 text-sm text-[color:var(--plearn-ink-3)]"
+                    }
+                    onClick={() => setMode("match")}
+                    type="button"
+                >
+                    Match
+                </button>
+                <button
+                    className={
+                        mode === "meaning"
+                            ? "rounded-md bg-[color:var(--background)] px-3 py-2 text-sm"
+                            : "px-3 py-2 text-sm text-[color:var(--plearn-ink-3)]"
+                    }
+                    onClick={() => setMode("meaning")}
+                    type="button"
+                >
+                    Meaning
+                </button>
+            </div>
+            {query ? (
+                <Link
+                    className="hidden items-center border-l border-[color:var(--border)] px-4 text-sm text-[color:var(--plearn-ink-3)] md:flex"
+                    href="/tools/vietnamese/catalog"
+                    onClick={() => setQuery("")}
+                >
                     Reset
-                </Button>
-            </div>
-            <div className="border-border bg-card space-y-3 rounded-2xl border p-4">
-                <label className="text-muted-foreground block text-sm font-medium">Semantic Search</label>
-                <div className="relative">
-                    <input
-                        className="border-input bg-background w-full rounded-xl border px-4 py-3 pr-10 outline-none"
-                        value={semantic}
-                        onChange={(e) => setSemantic(e.target.value)}
-                        placeholder="Find similar words by meaning or purpose"
-                    />
-                    {semanticLoading && <Spinner className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2" />}
-                </div>
-            </div>
+                </Link>
+            ) : null}
         </div>
     );
 }

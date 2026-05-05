@@ -1,9 +1,9 @@
 import { SentenceSearchForm } from "./_components/sentence-search-form";
 import { AnnotatedVietnameseText } from "@/components/learning/annotated-vietnamese-text";
+import { relativeTime, shortDate } from "@/lib/format";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import Link from "next/link";
 import { performance } from "node:perf_hooks";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 
 interface SentenceHistoryPageProps {
     readonly searchParams: Promise<{
@@ -22,51 +22,70 @@ export default async function SentenceHistoryPage({ searchParams }: SentenceHist
         offset: 0,
     });
 
-    const view = (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:gap-8 md:px-6 md:py-10">
-            <Card className="border-border bg-accent">
-                <CardHeader>
-                    <CardTitle className="text-4xl font-[var(--font-display)] tracking-[-0.06em] md:text-5xl">The Ledger</CardTitle>
-                    <CardDescription className="max-w-2xl text-base leading-7">
-                        Your chronological archive of sentence workspaces. Every saved or in-progress sentence remains inspectable and
-                        searchable.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <SentenceSearchForm />
-                </CardContent>
-            </Card>
+    const grouped = Object.groupBy(workspaces, (workspace) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = yesterdayDate.toISOString().slice(0, 10);
+        const key = workspace.createdAt.toISOString().slice(0, 10);
+        if (key === today) return "Today";
+        if (key === yesterday) return "Yesterday";
 
-            <section className="space-y-4">
-                <div className="flex items-end justify-between gap-4">
-                    <div>
-                        <p className="text-3xl font-[var(--font-display)] tracking-[-0.04em]">Recent Workspaces</p>
-                        <p className="text-muted-foreground text-sm">{workspaces.length} sentences matched.</p>
-                    </div>
-                </div>
-
-                <div className="grid gap-4">
-                    {workspaces.map((workspace) => (
-                        <Link key={workspace.id} href={`/tools/vietnamese/sentences/${workspace.id}`}>
-                            <Card className="hover:border-ring border-l-primary/30 hover:border-l-primary border-l-4 transition hover:-translate-y-0.5">
-                                <CardHeader>
-                                    <CardTitle className="text-2xl font-[var(--font-display)] tracking-[-0.03em]">
-                                        <AnnotatedVietnameseText text={workspace.sourceText} />
-                                    </CardTitle>
-                                    <CardDescription className="text-base">{workspace.summary ?? workspace.status}</CardDescription>
-                                </CardHeader>
-                                <CardContent className="text-muted-foreground font-mono text-sm">
-                                    Workspace {workspace.id.slice(0, 8)}
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-            </section>
-        </div>
-    );
+        return shortDate(workspace.createdAt.toISOString());
+    });
 
     console.info("[PERF][PAGE] vietnamese.sentences", { elapsedMs: Math.round(performance.now() - startedAt) });
 
-    return view;
+    return (
+        <div className="plearn-page">
+            <header className="mb-8 max-w-3xl">
+                <p className="plearn-eyebrow">Vietnamese</p>
+                <h1 className="mt-2 text-[2.35rem] font-[var(--font-display)] tracking-[-0.03em]">History</h1>
+                <p className="mt-2 text-sm text-[color:var(--plearn-ink-3)]">Everything you&apos;ve analyzed, added, or reviewed.</p>
+            </header>
+
+            <div className="mb-8 max-w-2xl">
+                <SentenceSearchForm />
+            </div>
+
+            <section className="space-y-7">
+                {Object.entries(grouped).map(([label, entries]) =>
+                    entries?.length ? (
+                        <div key={label}>
+                            <div className="plearn-divider-heading mb-3">
+                                <span className="name">{label}</span>
+                                <span className="count">{entries.length}</span>
+                            </div>
+                            <div className="space-y-1">
+                                {entries.map((workspace) => (
+                                    <Link
+                                        key={workspace.id}
+                                        href={`/tools/vietnamese/sentences/${workspace.id}`}
+                                        className="group grid gap-3 border-b border-[color:var(--plearn-line-soft)] px-2 py-4 transition-colors hover:bg-white/2 md:grid-cols-[80px_1fr_auto_auto] md:items-center"
+                                    >
+                                        <span className="text-sm text-[color:var(--plearn-ink-4)]">
+                                            {relativeTime(workspace.createdAt.toISOString()).replace(" ago", "")}
+                                        </span>
+                                        <div>
+                                            <p className="text-foreground text-[1.05rem] leading-[1.4] font-[var(--font-display)] tracking-[-0.01em]">
+                                                <AnnotatedVietnameseText text={workspace.sourceText} />
+                                            </p>
+                                            <p className="mt-1 text-xs text-[color:var(--plearn-ink-3)]">
+                                                {workspace.summary ?? workspace.status}
+                                            </p>
+                                        </div>
+                                        <span className="text-sm text-[color:var(--plearn-ink-3)]">Decomposition</span>
+                                        <span className="hidden gap-2 text-sm text-[color:var(--plearn-ink-4)] group-hover:flex">
+                                            <span>Open</span>
+                                            <span>Re-analyze</span>
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null,
+                )}
+            </section>
+        </div>
+    );
 }

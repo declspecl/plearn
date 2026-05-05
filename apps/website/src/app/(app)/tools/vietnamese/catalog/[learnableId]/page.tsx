@@ -1,5 +1,6 @@
 import { AnnotatedVietnameseText } from "@/components/learning/annotated-vietnamese-text";
 import { LearnableBadge } from "@/components/learning/learnable-badge";
+import { LearnableHoverText } from "@/components/learning/learnable-hover-text";
 import { getServices } from "@/lib/server/clients";
 import { createTRPCCaller } from "@/lib/server/trpc-caller";
 import { createLearnableId } from "@plearn/core/learning/model";
@@ -35,9 +36,10 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
     const otherRelated = related.filter((r) => r.relationType !== "contains_component");
 
     const allRelatedIds = [...related.map((r) => r.toLearnableId), ...backlinks.map((b) => b.fromLearnableId)];
-    const relatedLearnables = (
-        await Promise.all([...new Set(allRelatedIds)].map((id) => services.learnableCatalogService.getLearnable(id)))
-    ).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    const relatedLearnablePromises = await Promise.all(
+        [...new Set(allRelatedIds)].map((id) => services.learnableCatalogService.getLearnable(id)),
+    );
+    const relatedLearnables = relatedLearnablePromises.filter(Boolean) as NonNullable<(typeof relatedLearnablePromises)[number]>[];
     const relatedLearnableById = new Map(relatedLearnables.map((entry) => [entry.id, entry] as const));
 
     const view = (
@@ -48,7 +50,18 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                         <LearnableBadge type={learnable.type} />
                         <Badge variant="secondary">{learnable.occurrenceCount} occurrences</Badge>
                     </div>
-                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">{learnable.canonicalText}</CardTitle>
+                    <CardTitle className="text-5xl font-[var(--font-display)] tracking-[-0.06em]">
+                        <LearnableHoverText
+                            hint={{
+                                text: learnable.canonicalText,
+                                translation: learnable.translation,
+                                type: learnable.type,
+                                notes: learnable.usageNotes,
+                                formula: learnable.patternTemplate,
+                                exampleHints: learnable.examples.slice(0, 2),
+                            }}
+                        />
+                    </CardTitle>
                     <CardDescription className="text-lg">{learnable.translation}</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -56,8 +69,17 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                         <p className="text-muted-foreground text-sm font-medium">Study Notes</p>
                         <p className="text-base leading-7">{learnable.usageNotes}</p>
                         {learnable.patternTemplate ? (
-                            <div className="border-border bg-card rounded-2xl border p-4 font-mono text-sm">
-                                {learnable.patternTemplate}
+                            <div className="border-border bg-card rounded-2xl border p-4 text-base">
+                                <LearnableHoverText
+                                    hint={{
+                                        text: learnable.patternTemplate,
+                                        translation: learnable.translation,
+                                        type: learnable.type,
+                                        notes: learnable.usageNotes,
+                                        formula: learnable.patternTemplate,
+                                        exampleHints: learnable.examples.slice(0, 2),
+                                    }}
+                                />
                             </div>
                         ) : null}
                     </div>
@@ -126,6 +148,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                         {componentRelations.map((relation) => {
                             const target = relatedLearnableById.get(relation.toLearnableId);
                             if (!target) return null;
+
                             return (
                                 <Link
                                     key={relation.id}
@@ -152,6 +175,7 @@ export default async function LearnableDetailPage({ params }: LearnableDetailPag
                         {backlinks.map((backlink) => {
                             const source = relatedLearnableById.get(backlink.fromLearnableId);
                             if (!source) return null;
+
                             return (
                                 <Link
                                     key={backlink.id}

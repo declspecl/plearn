@@ -5,7 +5,7 @@ export function ArtisanVietnameseLandmark() {
         <div className="bg-card border-border group relative h-64 w-full overflow-hidden rounded-3xl border shadow-sm">
             {/* Ambient Background Glows */}
             <div className="bg-primary/20 absolute -top-12 -left-12 h-48 w-48 rounded-full opacity-60 blur-[80px] transition-opacity duration-700 group-hover:opacity-100" />
-            <div className="absolute -right-12 -bottom-12 h-48 w-48 rounded-full bg-blue-500/20 opacity-60 blur-[80px] transition-opacity duration-700 group-hover:opacity-100" />
+            <div className="absolute -right-12 -bottom-12 h-48 w-48 rounded-full bg-amber-500/12 opacity-60 blur-[80px] transition-opacity duration-700 group-hover:opacity-100" />
 
             <svg
                 className="absolute inset-0 h-full w-full"

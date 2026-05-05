@@ -1,15 +1,12 @@
 "use client";
 
 import { CheckCircleIcon, InfoIcon, WarningIcon, XCircleIcon, SpinnerIcon } from "@phosphor-icons/react";
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-    const { resolvedTheme } = useTheme();
-
     return (
         <Sonner
-            theme={(resolvedTheme ?? "system") as ToasterProps["theme"]}
+            theme="dark"
             className="toaster group"
             icons={{
                 success: <CheckCircleIcon className="size-4" />,

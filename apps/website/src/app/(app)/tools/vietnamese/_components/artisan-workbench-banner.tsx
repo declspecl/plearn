@@ -4,7 +4,7 @@ import React from "react";
 
 export function ArtisanWorkbenchBanner() {
     return (
-        <div className="group border-border bg-card hover:border-primary/30 relative flex min-h-[320px] w-full flex-col justify-end overflow-hidden rounded-[2.5rem] border shadow-sm transition-all duration-500 hover:shadow-md">
+        <div className="group border-border bg-card hover:border-primary/30 relative flex min-h-[280px] w-full flex-col justify-end overflow-hidden rounded-[2.5rem] border shadow-sm transition-all duration-500 hover:shadow-md">
             {/* Ambient Background Glows */}
             <div className="bg-primary/10 absolute -top-32 -left-32 h-96 w-96 rounded-full opacity-50 blur-[100px] transition-opacity duration-700 group-hover:opacity-100" />
             <div className="absolute right-12 -bottom-32 h-96 w-96 rounded-full bg-amber-500/10 opacity-50 blur-[100px] transition-opacity duration-700 group-hover:opacity-100" />
@@ -30,7 +30,10 @@ export function ArtisanWorkbenchBanner() {
                 <rect width="100%" height="100%" fill="url(#drafting-grid)" />
 
                 {/* Stylized Parsing Marks */}
-                <g className="text-primary/20 group-hover:text-primary/40 transition-all duration-700" style={{ transform: "translate(10%, 30%)" }}>
+                <g
+                    className="text-primary/20 group-hover:text-primary/40 transition-all duration-700"
+                    style={{ transform: "translate(10%, 30%)" }}
+                >
                     <text x="0" y="0" fontFamily="serif" fontSize="120" opacity="0.3">
                         {`{`}
                     </text>
@@ -43,7 +46,10 @@ export function ArtisanWorkbenchBanner() {
                         {`[`}
                     </text>
                 </g>
-                <g className="text-amber-500/20 transition-all duration-700 group-hover:text-amber-500/40" style={{ transform: "translate(80%, 20%)" }}>
+                <g
+                    className="text-amber-500/20 transition-all duration-700 group-hover:text-amber-500/40"
+                    style={{ transform: "translate(80%, 20%)" }}
+                >
                     <text x="0" y="0" fontFamily="serif" fontSize="140" opacity="0.2">
                         {`}`}
                     </text>
@@ -71,12 +77,11 @@ export function ArtisanWorkbenchBanner() {
             {/* Content Payload */}
             <div className="relative z-10 flex flex-col gap-6 p-10 md:flex-row md:items-end md:justify-between md:p-12">
                 <div className="max-w-2xl space-y-3">
-                    <h2 className="text-foreground text-4xl leading-none font-[var(--font-display)] tracking-[-0.04em] md:text-5xl">
-                        Sentence Analysis Engine
+                    <h2 className="text-foreground text-4xl leading-none font-[var(--font-display)] tracking-[-0.03em] md:text-5xl">
+                        Sentence analysis
                     </h2>
-                    <p className="text-muted-foreground text-lg leading-relaxed">
-                        Deconstruct complex thoughts. Isolate vocabulary, identify grammatical patterns, and commit them to your long-term
-                        compendium.
+                    <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">
+                        Capture a thought, translate it into Vietnamese, and decide what deserves a place in your long-term catalog.
                     </p>
                 </div>
 
@@ -84,7 +89,7 @@ export function ArtisanWorkbenchBanner() {
                     href="/tools/vietnamese/analyze"
                     className="group/btn bg-foreground text-background flex h-14 shrink-0 items-center justify-between gap-6 rounded-2xl px-6 shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
                 >
-                    <span className="font-medium">Start Analysis</span>
+                    <span className="font-medium">Start analysis</span>
                     <div className="bg-background/20 flex h-8 w-8 items-center justify-center rounded-full transition-transform duration-300 group-hover/btn:translate-x-1">
                         <ArrowRight className="size-4" weight="bold" />
                     </div>

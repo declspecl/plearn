@@ -3,16 +3,13 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 
 export function SentenceSearchForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isPending, startTransition] = useTransition();
-
     const [keyword, setKeyword] = useState(searchParams.get("q") ?? "");
-
     const isLoading = keyword !== (searchParams.get("q") ?? "") || isPending;
 
     useEffect(() => {
@@ -27,30 +24,29 @@ export function SentenceSearchForm() {
                 router.push(`?${params.toString()}`);
             });
         }, 400);
+
         return () => clearTimeout(timer);
-    }, [keyword]);
+    }, [keyword, router, searchParams]);
 
     return (
-        <div className="border-border bg-card max-w-2xl space-y-3 rounded-2xl border p-4">
-            <label className="text-muted-foreground block text-sm font-medium">Keyword Search</label>
+        <div className="plearn-panel max-w-2xl p-3">
             <div className="relative">
                 <input
-                    className="border-input bg-background focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border px-4 py-3 pr-10 transition-all outline-none focus:ring-1"
+                    className="w-full bg-transparent px-2 py-2 pr-10 text-sm outline-none placeholder:text-[color:var(--plearn-ink-4)]"
                     value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
+                    onChange={(event) => setKeyword(event.target.value)}
                     placeholder="Search by Vietnamese sentence or English summary..."
                 />
-                {isLoading && <Spinner className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2" />}
+                {isLoading ? <Spinner className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2" /> : null}
             </div>
             {keyword ? (
-                <Button
-                    render={<Link href="/tools/vietnamese/sentences" />}
-                    type="button"
-                    variant="secondary"
+                <Link
+                    className="block px-2 pt-2 text-sm text-[color:var(--plearn-ink-3)]"
+                    href="/tools/vietnamese/sentences"
                     onClick={() => setKeyword("")}
                 >
-                    Clear Filter
-                </Button>
+                    Clear filter
+                </Link>
             ) : null}
         </div>
     );
