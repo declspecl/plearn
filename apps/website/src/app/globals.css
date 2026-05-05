@@ -116,6 +116,14 @@
     --plearn-ink-4: color-mix(in srgb, var(--color-neutral-500) 72%, var(--color-white));
     --plearn-green: oklch(0.72 0.07 165);
     --plearn-amber: oklch(0.76 0.08 78);
+    --plearn-type-pattern: oklch(0.7 0.15 160);
+    --plearn-type-word: oklch(0.7 0.15 250);
+    --plearn-type-phrase: oklch(0.7 0.15 300);
+    --plearn-type-utility: oklch(0.75 0.12 75);
+    --plearn-state-new: oklch(0.7 0.15 250);
+    --plearn-state-matched: oklch(0.72 0.07 165);
+    --plearn-state-rejected: oklch(0.65 0.08 25);
+    --plearn-state-reviewing: oklch(0.76 0.08 78);
 }
 
 body {

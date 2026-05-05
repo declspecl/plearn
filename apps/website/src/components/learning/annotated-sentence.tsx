@@ -1,20 +1,14 @@
 "use client";
 
+import { ToneGraph } from "./tone-graph";
+import { TONE_CLASS } from "./tone-utils";
 import { getWordTone, type VietnameseTone } from "@plearn/core/vietnamese/tone-parser";
 import { api } from "@plearn/trpc/client/react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMemo, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
-
-const TONE_CLASS: Record<VietnameseTone, string> = {
-    1: "text-tone-1",
-    2: "text-tone-2",
-    3: "text-tone-3",
-    4: "text-tone-4",
-    5: "text-tone-5",
-    6: "text-tone-6",
-};
+import { cn } from "~/lib/utils";
 
 interface WordInfo {
     readonly text: string;
@@ -103,6 +97,7 @@ export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: Word
 
     return (
         <div className="space-y-2">
+            <ToneGraph text={wordInfo.text} className="mb-4 h-12 w-full max-w-[200px]" />
             <div className="flex items-center gap-2">
                 <span className="text-foreground text-sm font-semibold">{text}</span>
                 <AnimatePresence mode="wait">
@@ -238,10 +233,35 @@ export interface AnnotatedSentenceProps {
     readonly sentence: string;
     readonly items: readonly WordInfo[];
     readonly className?: string;
+    readonly showToneGraph?: boolean;
 }
 
-export function AnnotatedSentence({ sentence, items, className }: AnnotatedSentenceProps) {
+export function AnnotatedSentence({ sentence, items, className, showToneGraph }: AnnotatedSentenceProps) {
     const spans = useMemo(() => annotateSpans(sentence, items), [sentence, items]);
+
+    if (showToneGraph) {
+        return (
+            <div className={cn("flex flex-wrap items-end gap-x-1 gap-y-4", className)}>
+                {spans.map((span, i) => {
+                    if (/^\s+$/.test(span.text)) {
+                        return <span key={i} className="w-1" />; // Space
+                    }
+                    const content = span.wordInfo ? (
+                        <HoverableWord key={i} span={span as AnnotatedSpan & { wordInfo: WordInfo }} />
+                    ) : (
+                        <ToneColoredWord key={`plain-${i}`} text={span.text} />
+                    );
+
+                    return (
+                        <div key={i} className="flex flex-col items-center">
+                            <ToneGraph text={span.text} height={24} widthPerSyllable={30} className="mb-1 opacity-80" />
+                            {content}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
 
     return (
         <span className={className}>

@@ -8,6 +8,7 @@ interface AnnotatedVietnameseTextProps {
     readonly text: string;
     readonly languageCode?: string;
     readonly className?: string;
+    readonly showToneGraph?: boolean;
 }
 
 /**
@@ -30,7 +31,7 @@ function findMatchingText(sentenceLower: string, canonicalText: string, aliases:
     return canonicalText;
 }
 
-export function AnnotatedVietnameseText({ text, languageCode = "vi", className }: AnnotatedVietnameseTextProps) {
+export function AnnotatedVietnameseText({ text, languageCode = "vi", className, showToneGraph }: AnnotatedVietnameseTextProps) {
     const { data: learnables } = api.learning.annotateText.useQuery({ languageCode, text }, { staleTime: 300_000 });
 
     const wordInfos = useMemo<readonly WordInfo[]>(() => {
@@ -49,5 +50,5 @@ export function AnnotatedVietnameseText({ text, languageCode = "vi", className }
         }));
     }, [learnables, text]);
 
-    return <AnnotatedSentence sentence={text} items={wordInfos} className={className} />;
+    return <AnnotatedSentence sentence={text} items={wordInfos} className={className} showToneGraph={showToneGraph} />;
 }

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 import { cn } from "~/lib/utils";
 
@@ -126,16 +125,36 @@ function DuplicateSuggestions({ item, onMerge }: { item: EditableItem; onMerge: 
     );
 }
 
-function matchState(item: EditableItem) {
+function typeColor(type: EditableItem["proposedType"]) {
+    switch (type) {
+        case "grammar_pattern":
+            return "var(--plearn-type-pattern)";
+        case "vocabulary":
+            return "var(--plearn-type-word)";
+        case "phrase":
+            return "var(--plearn-type-phrase)";
+        case "utility_word":
+            return "var(--plearn-type-utility)";
+    }
+}
+
+function itemState(item: EditableItem) {
+    if (item.reviewAction === "reject") {
+        return { label: "skipped", color: "var(--plearn-state-rejected)", bg: "var(--plearn-state-rejected)" } as const;
+    }
     if (item.reviewAction === "merge_existing" && item.mergeTargetLearnableId) {
-        return { label: "matched", accent: "text-[color:var(--plearn-green)]", createNew: false };
+        return { label: "matched", color: "var(--plearn-state-matched)", bg: "var(--plearn-state-matched)" } as const;
     }
-
-    if (item.duplicateSuggestions.length > 0) {
-        return { label: "matched", accent: "text-[color:var(--plearn-green)]", createNew: false };
+    if (item.suggestionsStatus === "loading" || item.suggestionsStatus === "idle") {
+        return { label: "checking…", color: "var(--plearn-state-reviewing)", bg: "var(--plearn-state-reviewing)" } as const;
     }
-
-    return { label: "no match", accent: "text-[color:var(--plearn-ink-3)]", createNew: true };
+    if (item.duplicateSuggestions.length > 0 && item.reviewAction === "pending") {
+        return { label: "review match", color: "var(--plearn-state-reviewing)", bg: "var(--plearn-state-reviewing)" } as const;
+    }
+    if (item.reviewAction === "create_new") {
+        return { label: "new", color: "var(--plearn-state-new)", bg: "var(--plearn-state-new)" } as const;
+    }
+    return { label: "new", color: "var(--plearn-state-new)", bg: "var(--plearn-state-new)" } as const;
 }
 
 function ItemCard({
@@ -149,45 +168,67 @@ function ItemCard({
     onToggle: () => void;
     onUpdate: (patch: Partial<EditableItem>) => void;
 }) {
-    const state = matchState(item);
+    const state = itemState(item);
+    const tColor = typeColor(item.proposedType);
+    const isRejected = item.reviewAction === "reject";
 
     return (
         <div
             className={cn(
-                "overflow-hidden rounded-[10px] border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] transition-colors",
-                expanded ? "border-primary" : "hover:border-white/20",
+                "overflow-hidden rounded-[10px] border transition-colors",
+                isRejected
+                    ? "border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] opacity-45"
+                    : expanded
+                      ? "border-[color:var(--border)] bg-[color:var(--plearn-bg-2)]"
+                      : "border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] hover:border-white/20",
             )}
+            style={{ borderLeftWidth: "3px", borderLeftColor: isRejected ? "var(--plearn-state-rejected)" : tColor }}
         >
             <button
-                className="grid w-full gap-3 px-4 py-4 text-left md:grid-cols-[24px_1fr_auto_auto] md:items-center"
+                className="grid w-full gap-3 px-4 py-3.5 text-left md:grid-cols-[1fr_auto_auto_auto] md:items-center"
                 onClick={onToggle}
                 type="button"
             >
-                <span className="text-sm text-[color:var(--plearn-ink-4)]">{expanded ? "▾" : "▸"}</span>
-                <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className={cn("flex flex-wrap items-baseline gap-x-3 gap-y-1", isRejected && "line-through")}>
                     <span className="text-foreground text-[1.2rem] font-[var(--font-display)] tracking-[-0.02em]">{item.proposedText}</span>
                     <span className="text-sm text-[color:var(--plearn-ink-3)]">{item.proposedTranslation}</span>
                 </span>
-                <span className="justify-self-start rounded-full border border-[color:var(--border)] px-3 py-1 text-sm text-[color:var(--plearn-ink-3)]">
+                <span
+                    className="justify-self-start rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    style={{ backgroundColor: `color-mix(in srgb, ${tColor} 15%, transparent)`, color: tColor }}
+                >
                     {typeLabel(item.proposedType)}
                 </span>
-                <span className={cn("text-sm", state.accent)}>
+                <span
+                    className="justify-self-start rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    style={{ backgroundColor: `color-mix(in srgb, ${state.bg} 15%, transparent)`, color: state.color }}
+                >
                     {state.label}
-                    {state.createNew ? (
-                        <span
-                            className="text-primary ml-2"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onUpdate({ reviewAction: "create_new" });
-                            }}
-                        >
-                            + add to catalog
-                        </span>
-                    ) : null}
+                </span>
+                <span
+                    className="justify-self-end text-[color:var(--plearn-ink-4)] transition-colors hover:text-[color:var(--foreground)]"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onUpdate({ reviewAction: isRejected ? "create_new" : "reject", mergeTargetLearnableId: undefined });
+                    }}
+                    title={isRejected ? "Restore" : "Skip this item"}
+                >
+                    {isRejected ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path
+                                d="M2 8a6 6 0 0 1 10.3-4.2L10 6h5V1l-2.1 2.1A7.5 7.5 0 0 0 .5 8h1.5Zm12 0a6 6 0 0 1-10.3 4.2L6 10H1v5l2.1-2.1A7.5 7.5 0 0 0 15.5 8H14Z"
+                                fill="currentColor"
+                            />
+                        </svg>
+                    ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                    )}
                 </span>
             </button>
 
-            {expanded ? (
+            {expanded && !isRejected ? (
                 <div className="grid gap-5 border-t border-dashed border-[color:var(--border)] px-5 py-5 md:grid-cols-2">
                     <div className="space-y-4">
                         <div>
@@ -215,23 +256,6 @@ function ItemCard({
                                 />
                             </div>
                         ) : null}
-                        <div>
-                            <label className="mb-1 block text-sm text-[color:var(--plearn-ink-3)]">Review action</label>
-                            <Select
-                                value={item.reviewAction}
-                                onValueChange={(value) => onUpdate({ reviewAction: value as EditableItem["reviewAction"] })}
-                            >
-                                <SelectTrigger className="rounded-md bg-[color:var(--background)]">
-                                    <SelectValue placeholder="Choose review action" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="create_new">Create New</SelectItem>
-                                    <SelectItem value="merge_existing">Merge Existing</SelectItem>
-                                    <SelectItem value="reject">Reject</SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
                     </div>
 
                     <div className="space-y-4">
@@ -522,6 +546,26 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         }
     }, [workspace, workspaceSuggestionsQuery]);
 
+    useEffect(() => {
+        if (!workspace) return;
+        const needsAutoResolve = workspace.items.some(
+            (item) => item.reviewAction === "pending" && item.suggestionsStatus === "ready" && item.duplicateSuggestions.length === 0,
+        );
+        if (!needsAutoResolve) return;
+        setWorkspace((current) =>
+            current
+                ? {
+                      ...current,
+                      items: current.items.map((item) =>
+                          item.reviewAction === "pending" && item.suggestionsStatus === "ready" && item.duplicateSuggestions.length === 0
+                              ? { ...item, reviewAction: "create_new" as const }
+                              : item,
+                      ),
+                  }
+                : current,
+        );
+    }, [workspace]);
+
     function updateItem(id: string, patch: Partial<EditableItem>) {
         setWorkspace((current) =>
             current
@@ -739,6 +783,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                 <AnnotatedSentence
                                     sentence={sentenceData.text}
                                     items={wordInfoItems}
+                                    showToneGraph={true}
                                     className="text-[1.95rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em]"
                                 />
                                 <p className="text-sm text-[color:var(--plearn-ink-3)]">{sentenceData.meaning}</p>
@@ -754,12 +799,17 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                     ) : null}
 
                     {workspace.items.length > 0 ? (
-                        <section className="space-y-4">
+                        <section className="space-y-3">
                             <div className="plearn-divider-heading">
                                 <span className="name">Breakdown</span>
-                                <span className="count">{workspace.items.length} elements · click to inspect</span>
+                                <span className="count">
+                                    {workspace.items.filter((i) => i.reviewAction !== "reject").length} adding
+                                    {workspace.items.some((i) => i.reviewAction === "reject")
+                                        ? ` · ${workspace.items.filter((i) => i.reviewAction === "reject").length} skipped`
+                                        : ""}
+                                </span>
                             </div>
-                            <div className="grid gap-4">
+                            <div className="grid gap-2">
                                 {workspace.items.map((item) => (
                                     <ItemCard
                                         key={item.id}
@@ -773,9 +823,18 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                         </section>
                     ) : null}
 
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-[color:var(--plearn-ink-4)]">
+                            {workspace.items.some((i) => i.reviewAction === "pending")
+                                ? "Waiting for catalog matching…"
+                                : `${workspace.items.filter((i) => i.reviewAction !== "reject").length} items will be saved`}
+                        </span>
                         <Button
-                            disabled={updateMutation.isPending || saveMutation.isPending}
+                            disabled={
+                                updateMutation.isPending ||
+                                saveMutation.isPending ||
+                                workspace.items.some((i) => i.reviewAction === "pending")
+                            }
                             onClick={save}
                             type="button"
                             size="lg"
