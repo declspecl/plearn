@@ -11,7 +11,9 @@
             "@plearn/db/*": ["packages/db/src/*"],
             "@plearn/dependency/*": ["packages/dependency/src/*"],
             "@plearn/trpc/*": ["packages/trpc/src/*"],
-            "@plearn/utils/*": ["packages/utils/src/*"]
+            "@plearn/utils/*": ["packages/utils/src/*"],
+            "@/*": ["apps/website/src/*"],
+            "~/*": ["apps/website/src/*"]
         }
     },
     "include": ["local/**/*.ts", "integration/**/*.ts", "clearbox/**/*.ts"],

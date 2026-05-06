@@ -158,6 +158,7 @@ export interface SentenceWorkspaceRepository {
 export interface LearnableRepository {
     findLanguageByCode(code: string): Promise<Language | undefined>;
     listLearnables(filters: LearnableListFilters): Promise<readonly Learnable[]>;
+    countLearnables(filters: LearnableListFilters): Promise<number>;
     findLearnableById(id: LearnableId): Promise<Learnable | undefined>;
     findExactMatch(input: { languageId: Language["id"]; type: LearnableType; normalizedText: string }): Promise<Learnable | undefined>;
     findAllByNormalizedText(input: { languageId: Language["id"]; normalizedText: string }): Promise<readonly Learnable[]>;

@@ -1,6 +1,5 @@
-import { LearningAgentService } from "./agent/service";
-import { AgentRepository } from "./agent/store";
 import { getAppConfig } from "./app-config";
+import { ChatService } from "./chat/service";
 import { VercelAiLearningAnalyzer, VercelAiLearningEmbedder } from "./learning-ai";
 import { createAuth } from "@plearn/auth/server";
 import {
@@ -57,7 +56,7 @@ export function getRepositories() {
 }
 
 let cachedServices: Services | undefined;
-let cachedAgentService: LearningAgentService | undefined;
+let cachedChatService: ChatService | undefined;
 let cachedLearningEmbedder: VercelAiLearningEmbedder | undefined;
 
 function getLearningEmbedder() {
@@ -66,6 +65,7 @@ function getLearningEmbedder() {
     }
 
     cachedLearningEmbedder = new VercelAiLearningEmbedder();
+
     return cachedLearningEmbedder;
 }
 
@@ -87,12 +87,12 @@ export function getServices(): Services {
     return cachedServices;
 }
 
-export function getLearningAgentService(): LearningAgentService {
-    if (cachedAgentService) {
-        return cachedAgentService;
+export function getLearningChatService(): ChatService {
+    if (cachedChatService) {
+        return cachedChatService;
     }
 
-    cachedAgentService = new LearningAgentService(new AgentRepository(getDatabaseClient()), getServices(), getLearningEmbedder());
+    cachedChatService = new ChatService(getDatabaseClient(), getServices(), getLearningEmbedder());
 
-    return cachedAgentService;
+    return cachedChatService;
 }

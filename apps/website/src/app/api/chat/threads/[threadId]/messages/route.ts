@@ -1,8 +1,10 @@
-import { getAuth, getLearningAgentService } from "@/lib/server/clients";
+import { getAuth, getLearningChatService } from "@/lib/server/clients";
 import { z } from "zod";
 
 const requestSchema = z.object({
-    message: z.string().min(1),
+    message: z.string().min(1).optional(),
+    retryMessageId: z.string().min(1).optional(),
+    clientTurnId: z.string().min(1).optional(),
 });
 
 interface RouteContext {
@@ -22,9 +24,12 @@ export async function POST(request: Request, context: RouteContext) {
         return new Response("Invalid request payload", { status: 400 });
     }
 
-    return getLearningAgentService().runTurn({
+    return getLearningChatService().runTurn({
         userId: session.user.id,
         threadId,
         message: parsed.data.message,
+        retryMessageId: parsed.data.retryMessageId,
+        clientTurnId: parsed.data.clientTurnId,
+        requestSignal: request.signal,
     });
 }

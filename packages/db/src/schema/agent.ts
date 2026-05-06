@@ -4,7 +4,8 @@ import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, vector } from 
 export const agentThreadStatusEnum = pgEnum("agent_thread_status", ["active", "archived"]);
 export const agentGenerationStatusEnum = pgEnum("agent_generation_status", ["pending", "ready", "failed"]);
 export const agentMessageRoleEnum = pgEnum("agent_message_role", ["system", "user", "assistant", "tool"]);
-export const agentRunStatusEnum = pgEnum("agent_run_status", ["running", "completed", "failed", "cancelled"]);
+export const agentMessageStatusEnum = pgEnum("agent_message_status", ["streaming", "completed", "failed", "cancelled"]);
+export const agentRunStatusEnum = pgEnum("agent_run_status", ["running", "completed", "failed", "cancelled", "timed_out"]);
 export const agentMemoryKindEnum = pgEnum("agent_memory_kind", ["rolling_summary", "fact", "preference", "task_state"]);
 
 export const agentThreads = pgTable(
@@ -44,16 +45,27 @@ export const agentMessages = pgTable(
             .notNull()
             .references(() => agentThreads.id, { onDelete: "cascade" }),
         role: agentMessageRoleEnum("role").notNull(),
+        status: agentMessageStatusEnum("status").notNull().default("completed"),
         partsJson: jsonb("parts_json").notNull(),
         modelProvider: text("model_provider"),
         modelId: text("model_id"),
         finishReason: text("finish_reason"),
+        failureCode: text("failure_code"),
+        failureMessage: text("failure_message"),
+        retryOfMessageId: text("retry_of_message_id"),
         tokenUsageJson: jsonb("token_usage_json"),
         toolCallsJson: jsonb("tool_calls_json"),
         toolResultsJson: jsonb("tool_results_json"),
         createdAt: timestamp("created_at").notNull().defaultNow(),
+        updatedAt: timestamp("updated_at")
+            .notNull()
+            .defaultNow()
+            .$onUpdate(() => /* @__PURE__ */ new Date()),
     },
-    (table) => [index("agent_messages_thread_created_idx").on(table.threadId, table.createdAt)],
+    (table) => [
+        index("agent_messages_thread_created_idx").on(table.threadId, table.createdAt),
+        index("agent_messages_status_idx").on(table.status),
+    ],
 );
 
 export const agentThreadRuns = pgTable(
@@ -64,15 +76,19 @@ export const agentThreadRuns = pgTable(
             .notNull()
             .references(() => agentThreads.id, { onDelete: "cascade" }),
         triggerMessageId: text("trigger_message_id").references(() => agentMessages.id, { onDelete: "set null" }),
+        assistantMessageId: text("assistant_message_id").references(() => agentMessages.id, { onDelete: "set null" }),
+        clientTurnId: text("client_turn_id"),
         status: agentRunStatusEnum("status").notNull().default("running"),
         errorMessage: text("error_message"),
         startedAt: timestamp("started_at").notNull().defaultNow(),
         completedAt: timestamp("completed_at"),
+        cancelledAt: timestamp("cancelled_at"),
         createdAt: timestamp("created_at").notNull().defaultNow(),
     },
     (table) => [
         index("agent_thread_runs_thread_started_idx").on(table.threadId, table.startedAt),
         index("agent_thread_runs_status_idx").on(table.status),
+        index("agent_thread_runs_thread_client_turn_idx").on(table.threadId, table.clientTurnId),
     ],
 );
 

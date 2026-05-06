@@ -8,7 +8,6 @@ import {
 } from "@plearn/core/learning/model";
 import type {
     LearningEmbedder,
-    LearningSearchRepository,
     LearnableRepository,
     OccurrenceRepository,
     SentenceWorkspaceRepository,
@@ -95,6 +94,7 @@ describe("WorkspaceReviewService", () => {
         const learnables: LearnableRepository = {
             findLanguageByCode: vi.fn(),
             listLearnables: vi.fn(),
+            countLearnables: vi.fn(),
             findLearnableById: vi.fn(async () => existingLearnable),
             findExactMatch: vi.fn(),
             findAllByNormalizedText: vi.fn(async () => []),

@@ -1,7 +1,10 @@
 import { createComposition } from "@plearn/composition/create-composition";
 import type { CreateCompositionOptions } from "@plearn/composition/create-composition";
 
-export const clearboxDomains = [] as const;
+// The composition package currently exposes an empty runtime domain registry.
+// Keep a typed placeholder tuple here so clearbox support continues to compile
+// until real domains are registered.
+export const clearboxDomains = [undefined as never] as const;
 
 export interface ClearboxEnvironment {
     readonly compositionOptions: CreateCompositionOptions<typeof clearboxDomains>;

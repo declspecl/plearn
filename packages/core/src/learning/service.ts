@@ -798,6 +798,10 @@ export class LearnableCatalogService {
         return this.learnables.listLearnables(filters);
     }
 
+    public countLearnables(filters: LearnableListFilters): Promise<number> {
+        return this.learnables.countLearnables(filters);
+    }
+
     public getLearnable(learnableId: LearnableId): Promise<Learnable | undefined> {
         return this.learnables.findLearnableById(learnableId);
     }

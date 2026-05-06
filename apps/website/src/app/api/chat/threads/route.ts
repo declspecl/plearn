@@ -1,4 +1,4 @@
-import { getAuth, getLearningAgentService } from "@/lib/server/clients";
+import { getAuth, getLearningChatService } from "@/lib/server/clients";
 import { z } from "zod";
 
 const createThreadSchema = z.object({
@@ -11,19 +11,9 @@ export async function GET(request: Request) {
         return new Response("Unauthorized", { status: 401 });
     }
 
-    const threads = await getLearningAgentService().listThreads(session.user.id);
+    const threads = await getLearningChatService().listThreads(session.user.id);
 
-    return Response.json({
-        threads: threads.map((thread) => ({
-            id: thread.id,
-            title: thread.title,
-            summary: thread.summary,
-            languageCode: thread.languageCode,
-            lastMessageAt: thread.lastMessageAt.toISOString(),
-            createdAt: thread.createdAt.toISOString(),
-            updatedAt: thread.updatedAt.toISOString(),
-        })),
-    });
+    return Response.json({ threads });
 }
 
 export async function POST(request: Request) {
@@ -38,17 +28,7 @@ export async function POST(request: Request) {
         return new Response("Invalid request payload", { status: 400 });
     }
 
-    const thread = await getLearningAgentService().createThread(session.user.id, parsed.data.languageCode ?? "vi");
+    const thread = await getLearningChatService().createThread(session.user.id, parsed.data.languageCode ?? "vi");
 
-    return Response.json({
-        thread: {
-            id: thread.id,
-            title: thread.title,
-            summary: thread.summary,
-            languageCode: thread.languageCode,
-            lastMessageAt: thread.lastMessageAt.toISOString(),
-            createdAt: thread.createdAt.toISOString(),
-            updatedAt: thread.updatedAt.toISOString(),
-        },
-    });
+    return Response.json({ thread });
 }

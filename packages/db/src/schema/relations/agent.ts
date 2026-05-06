@@ -18,6 +18,14 @@ export const agentMessagesRelations = relations(agentMessages, ({ one, many }) =
         references: [agentThreads.id],
     }),
     triggeredRuns: many(agentThreadRuns),
+    retriedMessage: one(agentMessages, {
+        fields: [agentMessages.retryOfMessageId],
+        references: [agentMessages.id],
+        relationName: "retry_chain",
+    }),
+    retryAttempts: many(agentMessages, {
+        relationName: "retry_chain",
+    }),
 }));
 
 export const agentThreadRunsRelations = relations(agentThreadRuns, ({ one }) => ({
@@ -27,6 +35,10 @@ export const agentThreadRunsRelations = relations(agentThreadRuns, ({ one }) => 
     }),
     triggerMessage: one(agentMessages, {
         fields: [agentThreadRuns.triggerMessageId],
+        references: [agentMessages.id],
+    }),
+    assistantMessage: one(agentMessages, {
+        fields: [agentThreadRuns.assistantMessageId],
         references: [agentMessages.id],
     }),
 }));

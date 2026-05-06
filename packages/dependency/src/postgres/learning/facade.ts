@@ -22,7 +22,7 @@ import {
     learningSentenceWorkspaces,
     learningWorkspaceItems,
 } from "@plearn/db/schema";
-import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 
@@ -404,6 +404,56 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
         logQueryTiming("listLearnables", startedAt);
 
         return learnables;
+    }
+
+    public async countLearnables(filters: LearnableListFilters) {
+        const startedAt = performance.now();
+        const language = filters.languageCode ? await this.findLanguageByCode(filters.languageCode) : undefined;
+        const conditions = [];
+
+        if (language) {
+            conditions.push(eq(learningLearnables.languageId, language.id));
+        }
+
+        if (filters.types?.length) {
+            conditions.push(inArray(learningLearnables.type, toArray(filters.types)));
+        }
+
+        if (filters.query?.trim()) {
+            conditions.push(
+                or(
+                    ilike(learningLearnables.canonicalText, `%${filters.query}%`),
+                    ilike(learningLearnables.translation, `%${filters.query}%`),
+                    ilike(learningLearnables.usageNotes, `%${filters.query}%`),
+                    ilike(learningLearnables.searchDocument, `%${filters.query}%`),
+                ),
+            );
+        }
+
+        if (filters.archived === true) {
+            conditions.push(isNotNull(learningLearnables.archivedAt));
+        }
+
+        if (filters.archived === false) {
+            conditions.push(isNull(learningLearnables.archivedAt));
+        }
+
+        if (typeof filters.minOccurrenceCount === "number") {
+            conditions.push(gte(learningLearnables.occurrenceCount, filters.minOccurrenceCount));
+        }
+
+        if (typeof filters.maxOccurrenceCount === "number") {
+            conditions.push(lte(learningLearnables.occurrenceCount, filters.maxOccurrenceCount));
+        }
+
+        const [row] = await this.database
+            .select({ count: sql<number>`count(*)::int` })
+            .from(learningLearnables)
+            .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+        logQueryTiming("countLearnables", startedAt);
+
+        return row?.count ?? 0;
     }
 
     public async findLearnableById(id: string) {

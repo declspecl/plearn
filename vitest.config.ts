@@ -48,6 +48,9 @@ export default defineConfig({
             "@plearn/dependency": resolve(__dirname, "./packages/dependency/src"),
             "@plearn/trpc": resolve(__dirname, "./packages/trpc/src"),
             "@plearn/utils": resolve(__dirname, "./packages/utils/src"),
+            "@": resolve(__dirname, "./apps/website/src"),
+            "~": resolve(__dirname, "./apps/website/src"),
+            "server-only": resolve(__dirname, "./tests/local/support/server-only.ts"),
         },
     },
 });
