@@ -63,27 +63,35 @@ function extractExplanationData(rawAnalysisJson?: Record<string, unknown>): Expl
 
 function typeLabel(type: "grammar_pattern" | "vocabulary" | "utility_word" | "phrase") {
     switch (type) {
-        case "grammar_pattern":
+        case "grammar_pattern": {
             return "Pattern";
-        case "utility_word":
+        }
+        case "utility_word": {
             return "Utility";
-        case "vocabulary":
+        }
+        case "vocabulary": {
             return "Word";
-        case "phrase":
+        }
+        case "phrase": {
             return "Phrase";
+        }
     }
 }
 
 function typeColor(type: "grammar_pattern" | "vocabulary" | "utility_word" | "phrase") {
     switch (type) {
-        case "grammar_pattern":
+        case "grammar_pattern": {
             return "var(--plearn-type-pattern)";
-        case "vocabulary":
+        }
+        case "vocabulary": {
             return "var(--plearn-type-word)";
-        case "phrase":
+        }
+        case "phrase": {
             return "var(--plearn-type-phrase)";
-        case "utility_word":
+        }
+        case "utility_word": {
             return "var(--plearn-type-utility)";
+        }
     }
 }
 
@@ -217,6 +225,7 @@ function ExplainProgress({ isActive }: { isActive: boolean }) {
         if (!isActive) {
             setPhase(0);
             setElapsed(0);
+
             return;
         }
 

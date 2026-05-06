@@ -37,6 +37,7 @@ export function AnnotatedVietnameseText({ text, languageCode = "vi", className, 
     const wordInfos = useMemo<readonly WordInfo[]>(() => {
         if (!learnables) return [];
         const sentenceLower = text.toLowerCase();
+
         return learnables.map((learnable) => ({
             text: findMatchingText(sentenceLower, learnable.canonicalText, learnable.aliases),
             translation: learnable.translation,

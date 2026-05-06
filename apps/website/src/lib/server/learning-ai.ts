@@ -296,6 +296,7 @@ function mergeExplanationEnrichment(explanation: BasicExplanation, enrichment: E
         sentence: explanation.sentence,
         components: explanation.components.map((component, index) => {
             const extra = enrichment.components.find((entry) => entry.index === index);
+
             return {
                 ...component,
                 notes: extra?.notes,
@@ -305,6 +306,7 @@ function mergeExplanationEnrichment(explanation: BasicExplanation, enrichment: E
         }),
         words: explanation.words.map((word, index) => {
             const extra = enrichment.words.find((entry) => entry.index === index);
+
             return {
                 ...word,
                 notes: extra?.notes,
@@ -314,6 +316,7 @@ function mergeExplanationEnrichment(explanation: BasicExplanation, enrichment: E
         }),
         idioms: explanation.idioms.map((idiom, index) => {
             const extra = enrichment.idioms.find((entry) => entry.index === index);
+
             return {
                 ...idiom,
                 notes: extra?.notes,
@@ -387,6 +390,7 @@ function pickResponseHeaders(headers: unknown) {
     const filtered = Object.fromEntries(
         interestingKeys.flatMap((key) => {
             const value = source[key];
+
             return typeof value === "string" || typeof value === "number" ? [[key, value]] : [];
         }),
     );
@@ -490,6 +494,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
                 if (chunk.type === "text-delta") {
                     textDeltaChars += chunk.text.length;
                     textDeltaCount += 1;
+
                     return;
                 }
 

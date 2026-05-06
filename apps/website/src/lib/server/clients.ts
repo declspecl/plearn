@@ -1,3 +1,5 @@
+import { LearningAgentService } from "./agent/service";
+import { AgentRepository } from "./agent/store";
 import { getAppConfig } from "./app-config";
 import { VercelAiLearningAnalyzer, VercelAiLearningEmbedder } from "./learning-ai";
 import { createAuth } from "@plearn/auth/server";
@@ -55,6 +57,17 @@ export function getRepositories() {
 }
 
 let cachedServices: Services | undefined;
+let cachedAgentService: LearningAgentService | undefined;
+let cachedLearningEmbedder: VercelAiLearningEmbedder | undefined;
+
+function getLearningEmbedder() {
+    if (cachedLearningEmbedder) {
+        return cachedLearningEmbedder;
+    }
+
+    cachedLearningEmbedder = new VercelAiLearningEmbedder();
+    return cachedLearningEmbedder;
+}
 
 export function getServices(): Services {
     if (cachedServices) {
@@ -63,7 +76,7 @@ export function getServices(): Services {
 
     const database = getDatabaseClient();
     const learningFacade = new LearningFacade(database, new LearningConverter());
-    const embedder = new VercelAiLearningEmbedder();
+    const embedder = getLearningEmbedder();
     cachedServices = {
         learnableCatalogService: new LearnableCatalogService(learningFacade, learningFacade, learningFacade),
         semanticSearchService: new SemanticSearchService(learningFacade, embedder),
@@ -72,4 +85,14 @@ export function getServices(): Services {
     };
 
     return cachedServices;
+}
+
+export function getLearningAgentService(): LearningAgentService {
+    if (cachedAgentService) {
+        return cachedAgentService;
+    }
+
+    cachedAgentService = new LearningAgentService(new AgentRepository(getDatabaseClient()), getServices(), getLearningEmbedder());
+
+    return cachedAgentService;
 }

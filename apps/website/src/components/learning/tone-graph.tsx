@@ -28,7 +28,7 @@ function buildUnifiedPath(syllables: string[]) {
     let d = "";
     let currentY = 0;
 
-    syllables.forEach((syllable, i) => {
+    for (const [i, syllable] of syllables.entries()) {
         const tone = getWordTone(syllable);
         const x = i * 100;
 
@@ -37,32 +37,37 @@ function buildUnifiedPath(syllables: string[]) {
         let shape = "";
 
         switch (tone) {
-            case 1:
+            case 1: {
                 startY = 25;
                 endY = 25;
                 shape = `C ${x + 40},25 ${x + 70},25 ${x + 100},25`;
                 break;
-            case 2:
+            }
+            case 2: {
                 startY = 65;
                 endY = 15;
                 shape = `C ${x + 50},65 ${x + 70},15 ${x + 100},15`;
                 break;
-            case 3:
+            }
+            case 3: {
                 startY = 45;
                 endY = 75;
                 shape = `C ${x + 50},45 ${x + 70},75 ${x + 100},75`;
                 break;
+            }
             case 4:
-            case 5:
+            case 5: {
                 startY = 40;
                 endY = 35;
                 shape = `C ${x + 35},40 ${x + 50},95 ${x + 65},95 C ${x + 80},95 ${x + 90},35 ${x + 100},35`;
                 break;
-            case 6:
+            }
+            case 6: {
                 startY = 60;
                 endY = 90;
                 shape = `C ${x + 50},60 ${x + 70},90 ${x + 100},90`;
                 break;
+            }
         }
 
         if (i === 0) {
@@ -75,7 +80,7 @@ function buildUnifiedPath(syllables: string[]) {
 
         d += shape + " ";
         currentY = endY;
-    });
+    }
 
     return d.trim();
 }
@@ -92,7 +97,7 @@ export function ToneGraph({ text, className, height = 48, widthPerSyllable = 60 
     const viewBoxWidth = syllables.length * 100;
 
     const drawTime = syllables.length * 0.35; // fluid, quick motion
-    const pauseTime = 2.0;
+    const pauseTime = 2;
     const dur = drawTime + pauseTime;
     const drawEnd = drawTime / dur;
 

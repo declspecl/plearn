@@ -127,14 +127,18 @@ function DuplicateSuggestions({ item, onMerge }: { item: EditableItem; onMerge: 
 
 function typeColor(type: EditableItem["proposedType"]) {
     switch (type) {
-        case "grammar_pattern":
+        case "grammar_pattern": {
             return "var(--plearn-type-pattern)";
-        case "vocabulary":
+        }
+        case "vocabulary": {
             return "var(--plearn-type-word)";
-        case "phrase":
+        }
+        case "phrase": {
             return "var(--plearn-type-phrase)";
-        case "utility_word":
+        }
+        case "utility_word": {
             return "var(--plearn-type-utility)";
+        }
     }
 }
 
@@ -154,6 +158,7 @@ function itemState(item: EditableItem) {
     if (item.reviewAction === "create_new") {
         return { label: "new", color: "var(--plearn-state-new)", bg: "var(--plearn-state-new)" } as const;
     }
+
     return { label: "new", color: "var(--plearn-state-new)", bg: "var(--plearn-state-new)" } as const;
 }
 
@@ -494,6 +499,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                     options: [...nextWorkspaceResponse.clarification.options],
                 },
             ]);
+
             return;
         }
 
@@ -687,7 +693,27 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                     {clarificationFlow.map((step, index) => (
                         <div key={index} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] p-6">
                             <p className="text-foreground mb-4 font-medium">{step.question}</p>
-                            {!step.answer ? (
+                            {step.answer ? (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-[color:var(--plearn-ink-3)]">
+                                        Answered: <span className="text-foreground">{step.answer}</span>
+                                    </span>
+                                    {index === clarificationFlow.length - 1 ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFreeTextValue(step.answer ?? "");
+                                                setClarificationFlow((current) =>
+                                                    current.map((c, i) => (i === index ? { ...c, answer: undefined } : c)),
+                                                );
+                                            }}
+                                        >
+                                            Back / Edit
+                                        </Button>
+                                    ) : null}
+                                </div>
+                            ) : (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     {[...step.options]
                                         .sort((a, b) => (a.isRecommended === b.isRecommended ? 0 : a.isRecommended ? -1 : 1))
@@ -743,26 +769,6 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                             </Button>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-[color:var(--plearn-ink-3)]">
-                                        Answered: <span className="text-foreground">{step.answer}</span>
-                                    </span>
-                                    {index === clarificationFlow.length - 1 ? (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                setFreeTextValue(step.answer ?? "");
-                                                setClarificationFlow((current) =>
-                                                    current.map((c, i) => (i === index ? { ...c, answer: undefined } : c)),
-                                                );
-                                            }}
-                                        >
-                                            Back / Edit
-                                        </Button>
-                                    ) : null}
                                 </div>
                             )}
                         </div>

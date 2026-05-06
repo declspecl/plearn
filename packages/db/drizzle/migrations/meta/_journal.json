@@ -15,6 +15,13 @@
             "when": 1777939152062,
             "tag": "0001_illegal_lucky_pierre",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1778037485426,
+            "tag": "0002_real_felicia_hardy",
+            "breakpoints": true
         }
     ]
 }

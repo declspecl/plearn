@@ -1,0 +1,2015 @@
+{
+    "id": "d800358b-8491-4e9e-83cb-8de407fe85b8",
+    "prevId": "ae3c5e93-5dca-41b2-86ef-1661693180b1",
+    "version": "7",
+    "dialect": "postgresql",
+    "tables": {
+        "public.agent_messages": {
+            "name": "agent_messages",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "thread_id": {
+                    "name": "thread_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "role": {
+                    "name": "role",
+                    "type": "agent_message_role",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "parts_json": {
+                    "name": "parts_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "model_provider": {
+                    "name": "model_provider",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "model_id": {
+                    "name": "model_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "finish_reason": {
+                    "name": "finish_reason",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "token_usage_json": {
+                    "name": "token_usage_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "tool_calls_json": {
+                    "name": "tool_calls_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "tool_results_json": {
+                    "name": "tool_results_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "agent_messages_thread_created_idx": {
+                    "name": "agent_messages_thread_created_idx",
+                    "columns": [
+                        {
+                            "expression": "thread_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "created_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "agent_messages_thread_id_agent_threads_id_fk": {
+                    "name": "agent_messages_thread_id_agent_threads_id_fk",
+                    "tableFrom": "agent_messages",
+                    "tableTo": "agent_threads",
+                    "columnsFrom": ["thread_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.agent_thread_memory": {
+            "name": "agent_thread_memory",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "thread_id": {
+                    "name": "thread_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "memory_kind": {
+                    "name": "memory_kind",
+                    "type": "agent_memory_kind",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "content": {
+                    "name": "content",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source_message_ids_json": {
+                    "name": "source_message_ids_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "embedding": {
+                    "name": "embedding",
+                    "type": "vector(1536)",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "embedding_source_text": {
+                    "name": "embedding_source_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "agent_thread_memory_thread_kind_idx": {
+                    "name": "agent_thread_memory_thread_kind_idx",
+                    "columns": [
+                        {
+                            "expression": "thread_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "memory_kind",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "agent_thread_memory_embedding_hnsw_idx": {
+                    "name": "agent_thread_memory_embedding_hnsw_idx",
+                    "columns": [
+                        {
+                            "expression": "embedding",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last",
+                            "opclass": "vector_cosine_ops"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "hnsw",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "agent_thread_memory_thread_id_agent_threads_id_fk": {
+                    "name": "agent_thread_memory_thread_id_agent_threads_id_fk",
+                    "tableFrom": "agent_thread_memory",
+                    "tableTo": "agent_threads",
+                    "columnsFrom": ["thread_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.agent_thread_runs": {
+            "name": "agent_thread_runs",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "thread_id": {
+                    "name": "thread_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "trigger_message_id": {
+                    "name": "trigger_message_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "status": {
+                    "name": "status",
+                    "type": "agent_run_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'running'"
+                },
+                "error_message": {
+                    "name": "error_message",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "started_at": {
+                    "name": "started_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "completed_at": {
+                    "name": "completed_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "agent_thread_runs_thread_started_idx": {
+                    "name": "agent_thread_runs_thread_started_idx",
+                    "columns": [
+                        {
+                            "expression": "thread_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "started_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "agent_thread_runs_status_idx": {
+                    "name": "agent_thread_runs_status_idx",
+                    "columns": [
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "agent_thread_runs_thread_id_agent_threads_id_fk": {
+                    "name": "agent_thread_runs_thread_id_agent_threads_id_fk",
+                    "tableFrom": "agent_thread_runs",
+                    "tableTo": "agent_threads",
+                    "columnsFrom": ["thread_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "agent_thread_runs_trigger_message_id_agent_messages_id_fk": {
+                    "name": "agent_thread_runs_trigger_message_id_agent_messages_id_fk",
+                    "tableFrom": "agent_thread_runs",
+                    "tableTo": "agent_messages",
+                    "columnsFrom": ["trigger_message_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.agent_threads": {
+            "name": "agent_threads",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_by_user_id": {
+                    "name": "created_by_user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "language_code": {
+                    "name": "language_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'vi'"
+                },
+                "status": {
+                    "name": "status",
+                    "type": "agent_thread_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'active'"
+                },
+                "title": {
+                    "name": "title",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'New chat'"
+                },
+                "title_status": {
+                    "name": "title_status",
+                    "type": "agent_generation_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "summary": {
+                    "name": "summary",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "summary_status": {
+                    "name": "summary_status",
+                    "type": "agent_generation_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "title_locked_by_user": {
+                    "name": "title_locked_by_user",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "last_message_at": {
+                    "name": "last_message_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "archived_at": {
+                    "name": "archived_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "agent_threads_user_last_message_idx": {
+                    "name": "agent_threads_user_last_message_idx",
+                    "columns": [
+                        {
+                            "expression": "created_by_user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "last_message_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "agent_threads_status_idx": {
+                    "name": "agent_threads_status_idx",
+                    "columns": [
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "agent_threads_language_code_idx": {
+                    "name": "agent_threads_language_code_idx",
+                    "columns": [
+                        {
+                            "expression": "language_code",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "agent_threads_created_by_user_id_users_id_fk": {
+                    "name": "agent_threads_created_by_user_id_users_id_fk",
+                    "tableFrom": "agent_threads",
+                    "tableTo": "users",
+                    "columnsFrom": ["created_by_user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.accounts": {
+            "name": "accounts",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "account_id": {
+                    "name": "account_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "provider_id": {
+                    "name": "provider_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "access_token": {
+                    "name": "access_token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "refresh_token": {
+                    "name": "refresh_token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "id_token": {
+                    "name": "id_token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "access_token_expires_at": {
+                    "name": "access_token_expires_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "refresh_token_expires_at": {
+                    "name": "refresh_token_expires_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "scope": {
+                    "name": "scope",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "password": {
+                    "name": "password",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "accounts_userId_idx": {
+                    "name": "accounts_userId_idx",
+                    "columns": [
+                        {
+                            "expression": "user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "accounts_user_id_users_id_fk": {
+                    "name": "accounts_user_id_users_id_fk",
+                    "tableFrom": "accounts",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.sessions": {
+            "name": "sessions",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "expires_at": {
+                    "name": "expires_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "token": {
+                    "name": "token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "ip_address": {
+                    "name": "ip_address",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "user_agent": {
+                    "name": "user_agent",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "sessions_userId_idx": {
+                    "name": "sessions_userId_idx",
+                    "columns": [
+                        {
+                            "expression": "user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "sessions_user_id_users_id_fk": {
+                    "name": "sessions_user_id_users_id_fk",
+                    "tableFrom": "sessions",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "sessions_token_unique": {
+                    "name": "sessions_token_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["token"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.users": {
+            "name": "users",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "email": {
+                    "name": "email",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "email_verified": {
+                    "name": "email_verified",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "image": {
+                    "name": "image",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "users_email_unique": {
+                    "name": "users_email_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["email"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.verifications": {
+            "name": "verifications",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "identifier": {
+                    "name": "identifier",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "value": {
+                    "name": "value",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "expires_at": {
+                    "name": "expires_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "verifications_identifier_idx": {
+                    "name": "verifications_identifier_idx",
+                    "columns": [
+                        {
+                            "expression": "identifier",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_languages": {
+            "name": "learning_languages",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "learning_languages_code_uidx": {
+                    "name": "learning_languages_code_uidx",
+                    "columns": [
+                        {
+                            "expression": "code",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_learnable_aliases": {
+            "name": "learning_learnable_aliases",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "learnable_id": {
+                    "name": "learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "alias_text": {
+                    "name": "alias_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "normalized_alias_text": {
+                    "name": "normalized_alias_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "language_id": {
+                    "name": "language_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "learning_learnable_aliases_language_normalized_uidx": {
+                    "name": "learning_learnable_aliases_language_normalized_uidx",
+                    "columns": [
+                        {
+                            "expression": "language_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "normalized_alias_text",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnable_aliases_learnable_idx": {
+                    "name": "learning_learnable_aliases_learnable_idx",
+                    "columns": [
+                        {
+                            "expression": "learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_learnable_aliases_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_learnable_aliases_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_learnable_aliases",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "learning_learnable_aliases_language_id_learning_languages_id_fk": {
+                    "name": "learning_learnable_aliases_language_id_learning_languages_id_fk",
+                    "tableFrom": "learning_learnable_aliases",
+                    "tableTo": "learning_languages",
+                    "columnsFrom": ["language_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_learnable_examples": {
+            "name": "learning_learnable_examples",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "learnable_id": {
+                    "name": "learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "example_text": {
+                    "name": "example_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "translation": {
+                    "name": "translation",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source": {
+                    "name": "source",
+                    "type": "learning_example_source",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "learning_learnable_examples_learnable_idx": {
+                    "name": "learning_learnable_examples_learnable_idx",
+                    "columns": [
+                        {
+                            "expression": "learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_learnable_examples_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_learnable_examples_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_learnable_examples",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_learnables": {
+            "name": "learning_learnables",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "language_id": {
+                    "name": "language_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "type": {
+                    "name": "type",
+                    "type": "learning_learnable_type",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "canonical_text": {
+                    "name": "canonical_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "normalized_text": {
+                    "name": "normalized_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "translation": {
+                    "name": "translation",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "part_of_speech": {
+                    "name": "part_of_speech",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "usage_notes": {
+                    "name": "usage_notes",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "pattern_template": {
+                    "name": "pattern_template",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "difficulty": {
+                    "name": "difficulty",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "search_document": {
+                    "name": "search_document",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "''"
+                },
+                "embedding": {
+                    "name": "embedding",
+                    "type": "vector(1536)",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "embedding_source_text": {
+                    "name": "embedding_source_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "occurrence_count": {
+                    "name": "occurrence_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "first_seen_at": {
+                    "name": "first_seen_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "last_seen_at": {
+                    "name": "last_seen_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "archived_at": {
+                    "name": "archived_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {
+                "learning_learnables_language_type_normalized_uidx": {
+                    "name": "learning_learnables_language_type_normalized_uidx",
+                    "columns": [
+                        {
+                            "expression": "language_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "type",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "normalized_text",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnables_language_idx": {
+                    "name": "learning_learnables_language_idx",
+                    "columns": [
+                        {
+                            "expression": "language_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnables_type_idx": {
+                    "name": "learning_learnables_type_idx",
+                    "columns": [
+                        {
+                            "expression": "type",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnables_occurrence_count_idx": {
+                    "name": "learning_learnables_occurrence_count_idx",
+                    "columns": [
+                        {
+                            "expression": "occurrence_count",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnables_last_seen_idx": {
+                    "name": "learning_learnables_last_seen_idx",
+                    "columns": [
+                        {
+                            "expression": "last_seen_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_learnables_embedding_hnsw_idx": {
+                    "name": "learning_learnables_embedding_hnsw_idx",
+                    "columns": [
+                        {
+                            "expression": "embedding",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last",
+                            "opclass": "vector_cosine_ops"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "hnsw",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_learnables_language_id_learning_languages_id_fk": {
+                    "name": "learning_learnables_language_id_learning_languages_id_fk",
+                    "tableFrom": "learning_learnables",
+                    "tableTo": "learning_languages",
+                    "columnsFrom": ["language_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_occurrences": {
+            "name": "learning_occurrences",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "learnable_id": {
+                    "name": "learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "workspace_id": {
+                    "name": "workspace_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source_span_text": {
+                    "name": "source_span_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source_sentence_text": {
+                    "name": "source_sentence_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "rationale": {
+                    "name": "rationale",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "learning_occurrences_learnable_idx": {
+                    "name": "learning_occurrences_learnable_idx",
+                    "columns": [
+                        {
+                            "expression": "learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_occurrences_learnable_created_at_idx": {
+                    "name": "learning_occurrences_learnable_created_at_idx",
+                    "columns": [
+                        {
+                            "expression": "learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "created_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_occurrences_workspace_idx": {
+                    "name": "learning_occurrences_workspace_idx",
+                    "columns": [
+                        {
+                            "expression": "workspace_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_occurrences_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_occurrences_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_occurrences",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "learning_occurrences_workspace_id_learning_sentence_workspaces_id_fk": {
+                    "name": "learning_occurrences_workspace_id_learning_sentence_workspaces_id_fk",
+                    "tableFrom": "learning_occurrences",
+                    "tableTo": "learning_sentence_workspaces",
+                    "columnsFrom": ["workspace_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_related_learnables": {
+            "name": "learning_related_learnables",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "from_learnable_id": {
+                    "name": "from_learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "to_learnable_id": {
+                    "name": "to_learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "relation_type": {
+                    "name": "relation_type",
+                    "type": "learning_related_learnable_type",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "confidence": {
+                    "name": "confidence",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "learning_related_learnables_from_idx": {
+                    "name": "learning_related_learnables_from_idx",
+                    "columns": [
+                        {
+                            "expression": "from_learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_related_learnables_to_idx": {
+                    "name": "learning_related_learnables_to_idx",
+                    "columns": [
+                        {
+                            "expression": "to_learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_related_learnables_from_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_related_learnables_from_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_related_learnables",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["from_learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "learning_related_learnables_to_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_related_learnables_to_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_related_learnables",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["to_learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_sentence_workspaces": {
+            "name": "learning_sentence_workspaces",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "language_id": {
+                    "name": "language_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source_text": {
+                    "name": "source_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source_language_code": {
+                    "name": "source_language_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'en'"
+                },
+                "status": {
+                    "name": "status",
+                    "type": "learning_workspace_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'draft'"
+                },
+                "analysis_model_provider": {
+                    "name": "analysis_model_provider",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "analysis_model_id": {
+                    "name": "analysis_model_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "analysis_prompt_version": {
+                    "name": "analysis_prompt_version",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "summary": {
+                    "name": "summary",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "raw_analysis_json": {
+                    "name": "raw_analysis_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "reviewed_analysis_json": {
+                    "name": "reviewed_analysis_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "error_message": {
+                    "name": "error_message",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_by_user_id": {
+                    "name": "created_by_user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {
+                "learning_sentence_workspaces_language_idx": {
+                    "name": "learning_sentence_workspaces_language_idx",
+                    "columns": [
+                        {
+                            "expression": "language_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_sentence_workspaces_user_idx": {
+                    "name": "learning_sentence_workspaces_user_idx",
+                    "columns": [
+                        {
+                            "expression": "created_by_user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_sentence_workspaces_user_language_created_at_idx": {
+                    "name": "learning_sentence_workspaces_user_language_created_at_idx",
+                    "columns": [
+                        {
+                            "expression": "created_by_user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "language_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "created_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_sentence_workspaces_status_idx": {
+                    "name": "learning_sentence_workspaces_status_idx",
+                    "columns": [
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_sentence_workspaces_created_at_idx": {
+                    "name": "learning_sentence_workspaces_created_at_idx",
+                    "columns": [
+                        {
+                            "expression": "created_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_sentence_workspaces_language_id_learning_languages_id_fk": {
+                    "name": "learning_sentence_workspaces_language_id_learning_languages_id_fk",
+                    "tableFrom": "learning_sentence_workspaces",
+                    "tableTo": "learning_languages",
+                    "columnsFrom": ["language_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                },
+                "learning_sentence_workspaces_created_by_user_id_users_id_fk": {
+                    "name": "learning_sentence_workspaces_created_by_user_id_users_id_fk",
+                    "tableFrom": "learning_sentence_workspaces",
+                    "tableTo": "users",
+                    "columnsFrom": ["created_by_user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.learning_workspace_items": {
+            "name": "learning_workspace_items",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "workspace_id": {
+                    "name": "workspace_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "proposed_type": {
+                    "name": "proposed_type",
+                    "type": "learning_learnable_type",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "proposed_text": {
+                    "name": "proposed_text",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "proposed_translation": {
+                    "name": "proposed_translation",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "proposed_notes": {
+                    "name": "proposed_notes",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "proposed_json": {
+                    "name": "proposed_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "review_action": {
+                    "name": "review_action",
+                    "type": "learning_review_action",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "merge_target_learnable_id": {
+                    "name": "merge_target_learnable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "duplicate_suggestions_json": {
+                    "name": "duplicate_suggestions_json",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "duplicate_suggestions_status": {
+                    "name": "duplicate_suggestions_status",
+                    "type": "learning_suggestion_status",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'idle'"
+                },
+                "duplicate_suggestions_computed_at": {
+                    "name": "duplicate_suggestions_computed_at",
+                    "type": "timestamp",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "duplicate_suggestions_error": {
+                    "name": "duplicate_suggestions_error",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "position": {
+                    "name": "position",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "learning_workspace_items_workspace_idx": {
+                    "name": "learning_workspace_items_workspace_idx",
+                    "columns": [
+                        {
+                            "expression": "workspace_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_workspace_items_workspace_position_idx": {
+                    "name": "learning_workspace_items_workspace_position_idx",
+                    "columns": [
+                        {
+                            "expression": "workspace_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "position",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "learning_workspace_items_merge_target_idx": {
+                    "name": "learning_workspace_items_merge_target_idx",
+                    "columns": [
+                        {
+                            "expression": "merge_target_learnable_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "learning_workspace_items_workspace_id_learning_sentence_workspaces_id_fk": {
+                    "name": "learning_workspace_items_workspace_id_learning_sentence_workspaces_id_fk",
+                    "tableFrom": "learning_workspace_items",
+                    "tableTo": "learning_sentence_workspaces",
+                    "columnsFrom": ["workspace_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "learning_workspace_items_merge_target_learnable_id_learning_learnables_id_fk": {
+                    "name": "learning_workspace_items_merge_target_learnable_id_learning_learnables_id_fk",
+                    "tableFrom": "learning_workspace_items",
+                    "tableTo": "learning_learnables",
+                    "columnsFrom": ["merge_target_learnable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        }
+    },
+    "enums": {
+        "public.agent_generation_status": {
+            "name": "agent_generation_status",
+            "schema": "public",
+            "values": ["pending", "ready", "failed"]
+        },
+        "public.agent_memory_kind": {
+            "name": "agent_memory_kind",
+            "schema": "public",
+            "values": ["rolling_summary", "fact", "preference", "task_state"]
+        },
+        "public.agent_message_role": {
+            "name": "agent_message_role",
+            "schema": "public",
+            "values": ["system", "user", "assistant", "tool"]
+        },
+        "public.agent_run_status": {
+            "name": "agent_run_status",
+            "schema": "public",
+            "values": ["running", "completed", "failed", "cancelled"]
+        },
+        "public.agent_thread_status": {
+            "name": "agent_thread_status",
+            "schema": "public",
+            "values": ["active", "archived"]
+        },
+        "public.learning_example_source": {
+            "name": "learning_example_source",
+            "schema": "public",
+            "values": ["ai", "sentence_observed", "manual"]
+        },
+        "public.learning_learnable_type": {
+            "name": "learning_learnable_type",
+            "schema": "public",
+            "values": ["grammar_pattern", "vocabulary", "utility_word", "phrase"]
+        },
+        "public.learning_related_learnable_type": {
+            "name": "learning_related_learnable_type",
+            "schema": "public",
+            "values": ["similar_meaning", "same_pattern_family", "often_confused", "related_phrase", "contains_component"]
+        },
+        "public.learning_review_action": {
+            "name": "learning_review_action",
+            "schema": "public",
+            "values": ["pending", "create_new", "merge_existing", "reject"]
+        },
+        "public.learning_suggestion_status": {
+            "name": "learning_suggestion_status",
+            "schema": "public",
+            "values": ["idle", "loading", "ready", "failed"]
+        },
+        "public.learning_workspace_status": {
+            "name": "learning_workspace_status",
+            "schema": "public",
+            "values": ["draft", "analyzed", "reviewed", "saved", "failed"]
+        }
+    },
+    "schemas": {},
+    "sequences": {},
+    "roles": {},
+    "policies": {},
+    "views": {},
+    "_meta": {
+        "columns": {},
+        "schemas": {},
+        "tables": {}
+    }
+}

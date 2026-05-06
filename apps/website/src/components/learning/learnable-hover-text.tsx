@@ -9,6 +9,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/h
 
 export function ToneColoredText({ text }: { text: string }) {
     const parts = text.split(/(\s+)/);
+
     return (
         <>
             {parts.map((part, i) =>
