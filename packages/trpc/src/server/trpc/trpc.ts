@@ -5,6 +5,7 @@ import type {
     SentenceAnalysisService,
     WorkspaceReviewService,
 } from "@plearn/core/learning/service";
+import type { ReviewSessionService, PracticeService } from "@plearn/core/srs/service";
 import type { DatabaseInstance } from "@plearn/db/client";
 import { initTRPC, TRPCError } from "@trpc/server";
 import SuperJSON from "superjson";
@@ -23,6 +24,8 @@ export interface Services {
     readonly semanticSearchService: SemanticSearchService;
     readonly sentenceAnalysisService: SentenceAnalysisService;
     readonly workspaceReviewService: WorkspaceReviewService;
+    readonly reviewSessionService: ReviewSessionService;
+    readonly practiceService: PracticeService;
 }
 
 export interface TRPCContext {

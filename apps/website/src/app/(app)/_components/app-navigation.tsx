@@ -1,6 +1,17 @@
 "use client";
 
-import { BookOpenText, ChartLineUp, ChatsCircle, House, ListMagnifyingGlass, Stack, Translate } from "@phosphor-icons/react";
+import {
+    Barbell,
+    BookOpenText,
+    Cards,
+    ChartLineUp,
+    ChatsCircle,
+    House,
+    ListMagnifyingGlass,
+    Stack,
+    Translate,
+} from "@phosphor-icons/react";
+import { api } from "@plearn/trpc/client/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "~/lib/utils";
@@ -8,10 +19,16 @@ import { cn } from "~/lib/utils";
 export function AppNavigation() {
     const pathname = usePathname();
     const isVietnameseActive = pathname.startsWith("/tools/vietnamese");
+    const reviewStatus = api.srs.getReviewStatus.useQuery(undefined, {
+        staleTime: 60_000,
+    });
+    const dueCount = reviewStatus.data?.dueCount ?? 0;
 
     const globalLinks = [{ href: "/", label: "Tool deck", icon: House }];
     const languageLinks = [
         { href: "/tools/vietnamese", label: "Hub", match: pathname === "/tools/vietnamese", icon: House },
+        { href: "/tools/vietnamese/review", label: "Review", match: pathname.includes("/review"), icon: Cards, badge: dueCount },
+        { href: "/tools/vietnamese/practice", label: "Practice", match: pathname.includes("/practice"), icon: Barbell },
         { href: "/tools/vietnamese/analyze", label: "Analyze", match: pathname.includes("/analyze"), icon: ListMagnifyingGlass },
         { href: "/tools/vietnamese/explain", label: "Explain", match: pathname.includes("/explain"), icon: BookOpenText },
         { href: "/tools/vietnamese/chat", label: "Chat", match: pathname.includes("/chat"), icon: ChatsCircle },
@@ -53,7 +70,7 @@ export function AppNavigation() {
                     </div>
                 </div>
                 <div className="ml-5 space-y-1 border-l border-[color:var(--plearn-line-soft)] pl-3">
-                    {languageLinks.map(({ href, label, match, icon: Icon }) => (
+                    {languageLinks.map(({ href, label, match, icon: Icon, badge }) => (
                         <Link
                             key={href}
                             href={href}
@@ -67,7 +84,12 @@ export function AppNavigation() {
                             )}
                         >
                             <Icon weight={match ? "fill" : "duotone"} className="size-4" />
-                            {label}
+                            <span className="min-w-0 flex-1">{label}</span>
+                            {badge && badge > 0 ? (
+                                <span className="bg-primary/90 text-primary-foreground min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] leading-none">
+                                    {badge}
+                                </span>
+                            ) : null}
                         </Link>
                     ))}
                 </div>

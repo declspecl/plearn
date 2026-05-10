@@ -76,6 +76,30 @@
         "./vietnamese/tone-parser": {
             "types": "./src/vietnamese/tone-parser.ts",
             "default": "./dist/vietnamese/tone-parser.js"
+        },
+        "./srs": {
+            "types": "./src/srs/index.ts",
+            "default": "./dist/srs/index.js"
+        },
+        "./srs/model": {
+            "types": "./src/srs/model/index.ts",
+            "default": "./dist/srs/model/index.js"
+        },
+        "./srs/algorithm": {
+            "types": "./src/srs/algorithm.ts",
+            "default": "./dist/srs/algorithm.js"
+        },
+        "./srs/repository": {
+            "types": "./src/srs/repository.ts",
+            "default": "./dist/srs/repository.js"
+        },
+        "./srs/service": {
+            "types": "./src/srs/service.ts",
+            "default": "./dist/srs/service.js"
+        },
+        "./srs/ai": {
+            "types": "./src/srs/ai.ts",
+            "default": "./dist/srs/ai.js"
         }
     }
 }
