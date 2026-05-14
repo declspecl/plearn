@@ -29,6 +29,13 @@
             "when": 1778079969433,
             "tag": "0003_outstanding_valkyrie",
             "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1778727005770,
+            "tag": "0004_outstanding_plazm",
+            "breakpoints": true
         }
     ]
 }
