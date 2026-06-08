@@ -77,6 +77,7 @@ export const learningLearnables = pgTable(
         searchDocument: text("search_document").notNull().default(""),
         embedding: vector("embedding", { dimensions: 1536 }),
         embeddingSourceText: text("embedding_source_text"),
+        languageMetadataJson: jsonb("language_metadata_json").notNull().default({}),
         occurrenceCount: integer("occurrence_count").notNull().default(0),
         firstSeenAt: timestamp("first_seen_at").notNull().defaultNow(),
         lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),

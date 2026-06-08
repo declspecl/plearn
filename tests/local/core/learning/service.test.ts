@@ -13,11 +13,33 @@ import type {
     SentenceWorkspaceRepository,
 } from "@plearn/core/learning/repository";
 import { WorkspaceReviewService, buildSearchDocument, normalizeLearnableText } from "@plearn/core/learning/service";
+import { getLanguageTextProcessor } from "@plearn/core/learning/text-processor";
 import { describe, expect, it, vi } from "vitest";
 
 describe("learning helpers", () => {
     it("normalizes learnable text for dedupe", () => {
         expect(normalizeLearnableText("  Xin   Chào  ")).toBe("xin chào");
+    });
+
+    it("builds Japanese lookup candidates without whitespace boundaries", async () => {
+        const processor = getLanguageTextProcessor("ja");
+        const candidates = await processor.candidateLookupTexts("私は寿司を食べます");
+
+        expect(candidates).toContain("私は寿司を食べます");
+        expect(candidates).toContain("寿司");
+        expect(candidates).toContain("食べます");
+    });
+
+    it("enriches Japanese word metadata with reading data", async () => {
+        const processor = getLanguageTextProcessor("ja");
+        const metadata = await processor.enrichProposalText({ text: "寿司", type: "vocabulary" });
+
+        expect(metadata.reading).toBe("すし");
+        expect(metadata.romanization).toBe("sushi");
+        expect(metadata.languageMetadata).toMatchObject({
+            reading: "すし",
+            romanization: "sushi",
+        });
     });
 
     it("builds a dense search document", () => {
@@ -51,6 +73,7 @@ describe("WorkspaceReviewService", () => {
             updatedAt: new Date("2024-01-02"),
             aliases: [],
             examples: [],
+            languageMetadata: {},
         };
 
         const workspace: SentenceWorkspace = {

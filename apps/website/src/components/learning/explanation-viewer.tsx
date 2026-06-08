@@ -22,6 +22,9 @@ interface ExplanationComponent {
     readonly learnableType: "grammar_pattern" | "phrase";
     readonly notes?: string;
     readonly registerNotes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly romanization?: string;
     readonly exampleHints: readonly { readonly exampleText: string; readonly translation: string }[];
 }
 
@@ -33,6 +36,9 @@ interface ExplanationWord {
     readonly learnableType: "vocabulary" | "utility_word";
     readonly notes?: string;
     readonly registerNotes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly romanization?: string;
     readonly exampleHints: readonly { readonly exampleText: string; readonly translation: string }[];
 }
 
@@ -311,29 +317,42 @@ function ExplainProgress({ isActive }: { isActive: boolean }) {
 }
 
 export function ExplanationViewer() {
+    return <LanguageExplanationViewer languageCode="vi" languageName="Vietnamese" languageSlug="vietnamese" />;
+}
+
+export function LanguageExplanationViewer({
+    languageCode,
+    languageName,
+    languageSlug,
+}: {
+    readonly languageCode: string;
+    readonly languageName: string;
+    readonly languageSlug: string;
+}) {
     const [vietnameseText, setVietnameseText] = useState("");
     const [explanationData, setExplanationData] = useState<ExplanationData | undefined>();
     const [workspaceId, setWorkspaceId] = useState<string | undefined>();
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
     const [draftHydrated, setDraftHydrated] = useState(false);
 
-    const explainMutation = api.learning.explainVietnameseSentence.useMutation();
+    const explainMutation = api.learning.explainSentence.useMutation();
+    const explainDraftKey = `${EXPLAIN_DRAFT_KEY}:${languageCode}`;
 
     useEffect(() => {
-        const draft = getLocalStorageItem<string>(EXPLAIN_DRAFT_KEY);
+        const draft = getLocalStorageItem<string>(explainDraftKey);
         if (draft !== null) {
             setVietnameseText(draft);
         }
         setDraftHydrated(true);
-    }, []);
+    }, [explainDraftKey]);
 
     useEffect(() => {
         if (!draftHydrated) return;
-        setLocalStorageItem(EXPLAIN_DRAFT_KEY, vietnameseText);
-    }, [draftHydrated, vietnameseText]);
+        setLocalStorageItem(explainDraftKey, vietnameseText);
+    }, [draftHydrated, explainDraftKey, vietnameseText]);
 
     async function explain() {
-        const result = await explainMutation.mutateAsync({ vietnameseText: vietnameseText.trim() });
+        const result = await explainMutation.mutateAsync({ languageCode, targetText: vietnameseText.trim() });
         const rawJson = result.workspace.rawAnalysisJson as Record<string, unknown> | undefined;
         setExplanationData(extractExplanationData(rawJson));
         setWorkspaceId(result.workspace.id);
@@ -352,6 +371,9 @@ export function ExplanationViewer() {
                 type: component.learnableType,
                 notes: component.notes ?? "",
                 formula: component.formula,
+                reading: component.reading,
+                baseForm: component.baseForm,
+                romanization: component.romanization,
                 exampleHints: component.exampleHints,
             });
         }
@@ -362,6 +384,9 @@ export function ExplanationViewer() {
                 translation: word.meaning,
                 type: word.learnableType,
                 notes: word.notes ?? "",
+                reading: word.reading,
+                baseForm: word.baseForm,
+                romanization: word.romanization,
                 exampleHints: word.exampleHints,
             });
         }
@@ -418,7 +443,7 @@ export function ExplanationViewer() {
         <div className="space-y-8">
             <div className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)]">
                 <div className="flex items-baseline justify-between px-4 pt-4 pb-2 text-sm text-[color:var(--plearn-ink-3)]">
-                    <span>Vietnamese sentence</span>
+                    <span>{languageName} sentence</span>
                     <span className="text-[color:var(--plearn-ink-4)]">Cmd + Enter to explain</span>
                 </div>
                 <div className="px-4 pb-4">
@@ -426,7 +451,9 @@ export function ExplanationViewer() {
                         className="text-foreground field-sizing-content min-h-36 w-full resize-y rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 text-base transition-colors outline-none focus:border-white/18"
                         data-slot="textarea"
                         maxLength={1000}
-                        placeholder="Em ơi, anh muốn ăn phở bò tái nạm..."
+                        placeholder={
+                            languageCode === "ja" ? "昨日、駅前で友達とラーメンを食べました。" : "Em ơi, anh muốn ăn phở bò tái nạm..."
+                        }
                         value={vietnameseText}
                         onChange={(event) => setVietnameseText(event.target.value)}
                         onKeyDown={(event) => {
@@ -473,6 +500,7 @@ export function ExplanationViewer() {
                             <AnnotatedSentence
                                 sentence={explanationData.sentence.text}
                                 items={wordInfoItems}
+                                languageCode={languageCode}
                                 showToneGraph={true}
                                 className="text-[1.95rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em]"
                             />
@@ -482,9 +510,11 @@ export function ExplanationViewer() {
                                     <span className="text-[color:var(--plearn-ink-4)]">Lit.</span> {explanationData.sentence.literalGloss}
                                 </p>
                             ) : null}
-                            <div className="border-t border-[color:var(--border)] pt-4">
-                                <ToneLegend />
-                            </div>
+                            {languageCode === "vi" ? (
+                                <div className="border-t border-[color:var(--border)] pt-4">
+                                    <ToneLegend />
+                                </div>
+                            ) : null}
                         </div>
                     </section>
 
@@ -565,7 +595,7 @@ export function ExplanationViewer() {
                     {workspaceId ? (
                         <div className="flex items-center justify-end">
                             <a
-                                href={`/tools/vietnamese/sentences/${workspaceId}`}
+                                href={`/tools/${languageSlug}/sentences/${workspaceId}`}
                                 className="text-sm text-[color:var(--plearn-ink-3)] underline underline-offset-4 transition-colors hover:text-[color:var(--foreground)]"
                             >
                                 Review & save to catalog

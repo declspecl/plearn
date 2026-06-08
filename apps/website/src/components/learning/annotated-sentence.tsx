@@ -16,6 +16,9 @@ interface WordInfo {
     readonly type: "grammar_pattern" | "vocabulary" | "utility_word" | "phrase";
     readonly notes: string;
     readonly formula?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly romanization?: string;
     readonly exampleHints: readonly { readonly exampleText: string; readonly translation: string }[];
 }
 
@@ -24,10 +27,11 @@ interface AnnotatedSpan {
     readonly wordInfo?: WordInfo;
 }
 
-function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly AnnotatedSpan[] {
+function annotateSpans(sentence: string, items: readonly WordInfo[], languageCode: string): readonly AnnotatedSpan[] {
     const sortedItems = [...items].toSorted((a, b) => b.text.length - a.text.length);
     const spans: AnnotatedSpan[] = [];
     let remaining = sentence;
+    const requiresWordBoundary = languageCode !== "ja";
 
     while (remaining.length > 0) {
         const leadingSpace = remaining.match(/^\s+/);
@@ -43,7 +47,7 @@ function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly A
             const itemLower = item.text.toLowerCase();
             if (lower.startsWith(itemLower)) {
                 const nextChar = remaining[item.text.length];
-                if (!nextChar || /[\s,.\-!?;:"""''()[\]{}…]/.test(nextChar)) {
+                if (!requiresWordBoundary || !nextChar || /[\s,.\-!?;:"""''()[\]{}…]/.test(nextChar)) {
                     spans.push({ text: remaining.slice(0, item.text.length), wordInfo: item });
                     remaining = remaining.slice(item.text.length);
                     matched = true;
@@ -54,7 +58,7 @@ function annotateSpans(sentence: string, items: readonly WordInfo[]): readonly A
 
         if (!matched) {
             const nextSpace = remaining.search(/\s/);
-            const end = nextSpace === -1 ? remaining.length : nextSpace;
+            const end = nextSpace === -1 ? 1 : nextSpace;
             spans.push({ text: remaining.slice(0, end) });
             remaining = remaining.slice(end);
         }
@@ -82,8 +86,18 @@ function PulsingDots() {
     );
 }
 
-export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: WordInfo; text: string; enabled: boolean }) {
-    const catalogQuery = api.learning.lookupByText.useQuery({ languageCode: "vi", text: wordInfo.text }, { staleTime: 60_000, enabled });
+export function WordPopoverContent({
+    wordInfo,
+    text,
+    enabled,
+    languageCode,
+}: {
+    wordInfo: WordInfo;
+    text: string;
+    enabled: boolean;
+    languageCode: string;
+}) {
+    const catalogQuery = api.learning.lookupByText.useQuery({ languageCode, text: wordInfo.text }, { staleTime: 60_000, enabled });
 
     const catalogData = catalogQuery.data;
     const isLoading = enabled && catalogQuery.isLoading;
@@ -93,11 +107,19 @@ export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: Word
     const notes = catalogData?.usageNotes ?? wordInfo.notes;
     const formula = catalogData?.patternTemplate ?? wordInfo.formula;
     const partOfSpeech = catalogData?.partOfSpeech;
+    const reading =
+        (typeof catalogData?.languageMetadata.reading === "string" ? catalogData.languageMetadata.reading : undefined) ?? wordInfo.reading;
+    const baseForm =
+        (typeof catalogData?.languageMetadata.baseForm === "string" ? catalogData.languageMetadata.baseForm : undefined) ??
+        wordInfo.baseForm;
+    const romanization =
+        (typeof catalogData?.languageMetadata.romanization === "string" ? catalogData.languageMetadata.romanization : undefined) ??
+        wordInfo.romanization;
     const occurrenceCount = catalogData?.occurrenceCount;
 
     return (
         <div className="space-y-2">
-            <ToneGraph text={wordInfo.text} className="mb-4 h-12 w-full max-w-[200px]" />
+            {languageCode === "vi" ? <ToneGraph text={wordInfo.text} className="mb-4 h-12 w-full max-w-[200px]" /> : null}
             <div className="flex items-center gap-2">
                 <span className="text-foreground text-sm font-semibold">{text}</span>
                 <AnimatePresence mode="wait">
@@ -135,6 +157,13 @@ export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: Word
                     </motion.span>
                 ) : null}
             </div>
+            {reading || baseForm || romanization ? (
+                <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {reading ? <span>Reading: {reading}</span> : null}
+                    {baseForm ? <span>Base: {baseForm}</span> : null}
+                    {romanization ? <span>{romanization}</span> : null}
+                </div>
+            ) : null}
             <p className="text-foreground/90">{translation}</p>
             {formula ? <p className="text-muted-foreground font-mono text-[11px]">{formula}</p> : null}
             {notes ? <p className="text-muted-foreground">{notes}</p> : null}
@@ -186,7 +215,24 @@ export function WordPopoverContent({ wordInfo, text, enabled }: { wordInfo: Word
     );
 }
 
-function HoverableWord({ span }: { span: AnnotatedSpan & { wordInfo: WordInfo } }) {
+function InlineWordText({ text, reading, languageCode }: { text: string; reading?: string; languageCode: string }) {
+    if (languageCode === "vi") {
+        return <ToneColoredWord text={text} />;
+    }
+
+    if (languageCode !== "ja" || !reading || reading === text) {
+        return <span>{text}</span>;
+    }
+
+    return (
+        <ruby>
+            {text}
+            <rt className="text-[0.55em] text-[color:var(--plearn-ink-4)]">{reading}</rt>
+        </ruby>
+    );
+}
+
+function HoverableWord({ span, languageCode }: { span: AnnotatedSpan & { wordInfo: WordInfo }; languageCode: string }) {
     const [hasOpened, setHasOpened] = useState(false);
 
     return (
@@ -199,10 +245,10 @@ function HoverableWord({ span }: { span: AnnotatedSpan & { wordInfo: WordInfo } 
                 delay={150}
                 className="decoration-foreground/30 cursor-default underline decoration-dotted underline-offset-4"
             >
-                <ToneColoredWord text={span.text} />
+                <InlineWordText text={span.text} reading={span.wordInfo.reading} languageCode={languageCode} />
             </HoverCardTrigger>
             <HoverCardContent side="top" sideOffset={6} className="w-64">
-                <WordPopoverContent wordInfo={span.wordInfo} text={span.text} enabled={hasOpened} />
+                <WordPopoverContent wordInfo={span.wordInfo} text={span.text} enabled={hasOpened} languageCode={languageCode} />
             </HoverCardContent>
         </HoverCard>
     );
@@ -233,13 +279,14 @@ export interface AnnotatedSentenceProps {
     readonly sentence: string;
     readonly items: readonly WordInfo[];
     readonly className?: string;
+    readonly languageCode?: string;
     readonly showToneGraph?: boolean;
 }
 
-export function AnnotatedSentence({ sentence, items, className, showToneGraph }: AnnotatedSentenceProps) {
-    const spans = useMemo(() => annotateSpans(sentence, items), [sentence, items]);
+export function AnnotatedSentence({ sentence, items, className, languageCode = "vi", showToneGraph }: AnnotatedSentenceProps) {
+    const spans = useMemo(() => annotateSpans(sentence, items, languageCode), [sentence, items, languageCode]);
 
-    if (showToneGraph) {
+    if (showToneGraph && languageCode === "vi") {
         return (
             <div className={cn("flex flex-wrap items-end gap-x-1 gap-y-4", className)}>
                 {spans.map((span, i) => {
@@ -247,7 +294,7 @@ export function AnnotatedSentence({ sentence, items, className, showToneGraph }:
                         return <span key={i} className="w-1" />; // Space
                     }
                     const content = span.wordInfo ? (
-                        <HoverableWord key={i} span={span as AnnotatedSpan & { wordInfo: WordInfo }} />
+                        <HoverableWord key={i} span={span as AnnotatedSpan & { wordInfo: WordInfo }} languageCode={languageCode} />
                     ) : (
                         <ToneColoredWord key={`plain-${i}`} text={span.text} />
                     );
@@ -267,11 +314,11 @@ export function AnnotatedSentence({ sentence, items, className, showToneGraph }:
         <span className={className}>
             {spans.map((span, i) =>
                 span.wordInfo ? (
-                    <HoverableWord key={i} span={span as AnnotatedSpan & { wordInfo: WordInfo }} />
+                    <HoverableWord key={i} span={span as AnnotatedSpan & { wordInfo: WordInfo }} languageCode={languageCode} />
                 ) : /^\s+$/.test(span.text) ? (
                     <span key={i}>{span.text}</span>
                 ) : (
-                    <ToneColoredWord key={`plain-${i}`} text={span.text} />
+                    <InlineWordText text={span.text} languageCode={languageCode} key={`plain-${i}`} />
                 ),
             )}
         </span>

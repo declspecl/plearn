@@ -110,7 +110,7 @@ export interface LearningAnalyzer {
           }
     >;
 
-    explainVietnameseSentence(input: { vietnameseText: string }): Promise<{
+    explainSentence(input: { languageCode: string; targetText: string }): Promise<{
         readonly status: "explained";
         readonly explanation: SentenceExplanation;
         readonly modelProvider: string;

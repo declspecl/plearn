@@ -1,0 +1,1 @@
+ALTER TABLE "learning_learnables" ADD COLUMN "language_metadata_json" jsonb DEFAULT '{}'::jsonb NOT NULL;

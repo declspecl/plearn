@@ -18,13 +18,24 @@ interface MobileNavProps {
 
 export function MobileNav({ user }: MobileNavProps) {
     const pathname = usePathname();
-    const showTabs = pathname.startsWith("/tools/vietnamese");
+    const activeLanguageSlug = pathname.startsWith("/tools/japanese")
+        ? "japanese"
+        : pathname.startsWith("/tools/vietnamese")
+          ? "vietnamese"
+          : null;
+    const showTabs = Boolean(activeLanguageSlug);
+    const baseHref = `/tools/${activeLanguageSlug ?? "vietnamese"}`;
     const tabs = [
-        { href: "/tools/vietnamese", label: "Hub", icon: House, active: pathname === "/tools/vietnamese" },
-        { href: "/tools/vietnamese/analyze", label: "Analyze", icon: ListMagnifyingGlass, active: pathname.includes("/analyze") },
-        { href: "/tools/vietnamese/catalog", label: "Catalog", icon: Stack, active: pathname.includes("/catalog") },
-        { href: "/tools/vietnamese/sentences", label: "History", icon: ListMagnifyingGlass, active: pathname.includes("/sentences") },
-        { href: "/tools/vietnamese/insights", label: "Stats", icon: ChartLineUp, active: pathname.includes("/insights") },
+        { href: baseHref, label: "Hub", icon: House, active: pathname === baseHref },
+        { href: `${baseHref}/analyze`, label: "Analyze", icon: ListMagnifyingGlass, active: pathname.startsWith(`${baseHref}/analyze`) },
+        { href: `${baseHref}/catalog`, label: "Catalog", icon: Stack, active: pathname.startsWith(`${baseHref}/catalog`) },
+        {
+            href: `${baseHref}/sentences`,
+            label: "History",
+            icon: ListMagnifyingGlass,
+            active: pathname.startsWith(`${baseHref}/sentences`),
+        },
+        { href: `${baseHref}/review`, label: "Review", icon: ChartLineUp, active: pathname.startsWith(`${baseHref}/review`) },
     ];
 
     return (

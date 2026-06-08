@@ -50,11 +50,67 @@ function createSrsAbortSignal() {
     return AbortSignal.timeout(appConfig.LEARNING_ANALYSIS_TIMEOUT_MS);
 }
 
+function getSrsLanguageProfile(learnables: readonly Learnable[]) {
+    const languageCode = String(learnables[0]?.languageId ?? "vi");
+
+    if (languageCode === "ja") {
+        return {
+            code: "ja",
+            name: "Japanese",
+            tutorDescription: "Japanese language tutor",
+            learnerDescription: "a learner studying Japanese",
+            itemLabel: "Japanese",
+            requiredKnowledge:
+                "Japanese vocabulary, phrases, grammar patterns, particles, conjugations, counters, politeness, or cultural/register knowledge",
+            productionLabel: "English-to-Japanese",
+            contextRule:
+                "Only include context when politeness, relationship, register, implied subject, or setting materially changes the expected answer.",
+            scenarioFlavor: "Use realistic contemporary Japanese contexts from daily life.",
+            errorFocus:
+                "wrong particle, wrong conjugation, wrong politeness/register, wrong counter, or incorrect usage of the target item",
+            naturalVariation:
+                "Japanese has multiple natural phrasings and kanji/kana variants. Do not penalize equally natural alternatives.",
+            strictRule:
+                "For particles, conjugation, counters, and politeness cards: be strict about correctness because these are real errors even when the broad meaning is understandable.",
+            quotedTextRule:
+                "Japanese text is allowed only when quoting the learner's answer, the correct answer, or a natural alternative phrasing.",
+            registerShift: "The two contexts should require meaningfully different politeness, formality, particle choice, or phrasing.",
+            subtextContext: "The context should make the subtext clear to someone who understands Japanese communication norms.",
+        };
+    }
+
+    return {
+        code: "vi",
+        name: "Vietnamese",
+        tutorDescription: "Vietnamese language tutor",
+        learnerDescription: "a learner studying Southern Vietnamese",
+        itemLabel: "Vietnamese",
+        requiredKnowledge: "Vietnamese vocabulary, phrases, grammar patterns, or cultural/register knowledge",
+        productionLabel: "English-to-Vietnamese",
+        contextRule:
+            "Only include context when social relationship, register, pronoun choice, or setting materially changes the expected answer.",
+        scenarioFlavor: "Use Southern Vietnamese context (Saigon, daily life).",
+        errorFocus: "wrong pronoun for the context, wrong particle, wrong register, or incorrect usage of the target item",
+        naturalVariation:
+            "Vietnamese has many natural ways to say things. Don't penalize regional variations or equally natural alternatives.",
+        strictRule:
+            "For register/pronoun cards: be strict about social correctness — using the wrong pronoun for the context is a real error even if the grammar is fine.",
+        quotedTextRule:
+            "Vietnamese text is allowed only when quoting the learner's answer, the correct answer, or a natural alternative phrasing.",
+        registerShift: "The two contexts should require meaningfully different pronoun choices, particles, or formality.",
+        subtextContext: "The context should make the subtext clear to someone who understands Vietnamese culture.",
+    };
+}
+
 function formatLearnableContext(learnable: Learnable): string {
-    const parts = [`Vietnamese: ${learnable.canonicalText}`, `Type: ${learnable.type}`, `Meaning: ${learnable.translation}`];
+    const profile = getSrsLanguageProfile([learnable]);
+    const parts = [`${profile.itemLabel}: ${learnable.canonicalText}`, `Type: ${learnable.type}`, `Meaning: ${learnable.translation}`];
     if (learnable.usageNotes) parts.push(`Usage notes: ${learnable.usageNotes}`);
     if (learnable.patternTemplate) parts.push(`Pattern: ${learnable.patternTemplate}`);
     if (learnable.partOfSpeech) parts.push(`Part of speech: ${learnable.partOfSpeech}`);
+    if (typeof learnable.languageMetadata.reading === "string") parts.push(`Reading: ${learnable.languageMetadata.reading}`);
+    if (typeof learnable.languageMetadata.baseForm === "string") parts.push(`Base form: ${learnable.languageMetadata.baseForm}`);
+    if (typeof learnable.languageMetadata.romanization === "string") parts.push(`Romanization: ${learnable.languageMetadata.romanization}`);
     if (learnable.aliases.length > 0) parts.push(`Aliases: ${learnable.aliases.join(", ")}`);
     if (learnable.examples.length > 0) {
         const exs = learnable.examples
@@ -120,7 +176,7 @@ const cardPromptOptionSchema = z.object({
 const cardPromptSchema = z.object({
     instruction: z.string().describe("The direct task or question shown to the learner"),
     context: z.string().optional().describe("Optional social or situational context"),
-    stimulus: z.string().optional().describe("Optional Vietnamese sentence, sentence start, source sentence, or English meaning"),
+    stimulus: z.string().optional().describe("Optional target-language sentence, sentence start, source sentence, or English meaning"),
     stimulusLabel: z.string().optional().describe("Optional short label for the stimulus, such as Sentence, Source, or Meaning"),
     hint: z.string().optional().describe("Optional learner-facing hint that does not reveal the tested target item"),
     options: z.array(cardPromptOptionSchema).optional().describe("Multiple choice options, if applicable"),
@@ -128,10 +184,11 @@ const cardPromptSchema = z.object({
 });
 
 function buildCardGenerationPrompt(input: SrsCardGeneratorInput): string {
+    const profile = getSrsLanguageProfile(input.targetLearnables);
     const targetContext = formatLearnableList(input.targetLearnables);
     const knownInventory = formatKnownLearnableInventory(input.bundledLearnables ?? []);
 
-    const base = `You are a Vietnamese language tutor creating a review card for a learner studying Southern Vietnamese.
+    const base = `You are a ${profile.tutorDescription} creating a review card for ${profile.learnerDescription}.
 
 Target item(s) to test:
 ${targetContext}
@@ -144,9 +201,9 @@ Card type: ${CARD_TYPE_LABELS[input.cardType]}
 Hard constraint:
 - Treat the known catalog as the learner's entire current usable inventory.
 - This is a "given everything the learner has learned, what can they do with it?" card.
-- Do not require Vietnamese vocabulary, phrases, grammar patterns, or cultural/register knowledge that is not in the target item(s) or complete known catalog.
+- Do not require ${profile.requiredKnowledge} that is not in the target item(s) or complete known catalog.
 - The expected answer must be constructible from the target item(s), the complete known catalog, and only unavoidable ultra-basic function words.
-- Do not introduce new required ideas such as jobs, hobbies, locations, people, adverbs, or objects unless the exact Vietnamese item is listed above.
+- Do not introduce new required ideas such as jobs, hobbies, locations, people, adverbs, or objects unless the exact ${profile.itemLabel} item is listed above.
 - Keep the English scenario semantically narrow. It may give social context, but the actual content the learner must produce should only combine listed learnables.
 - If the listed learnables are not enough for a rich prompt, make a shorter simpler card instead of inventing unknown vocabulary.
 - The answer should not require every known item. Pick a natural small subset from the complete known catalog.
@@ -157,8 +214,8 @@ Visible output rules:
 - Do not tell the learner which target item is being tested.
 - Hints may mention the general skill to inspect, or may include one or two non-target familiar items if useful, but must not give away the answer.
 - If the target appears in the stimulus sentence because the exercise needs it, do not call it "the target" or say whether it is correct.
-- Only include context when social relationship, register, pronoun choice, or setting materially changes the expected answer. Omit context for straightforward translation/meaning tasks.
-- For English-to-Vietnamese production cards, put the English sentence or idea in stimulus with stimulusLabel "Prompt"; keep instruction short.
+- ${profile.contextRule} Omit context for straightforward translation/meaning tasks.
+- For ${profile.productionLabel} production cards, put the English sentence or idea in stimulus with stimulusLabel "Prompt"; keep instruction short.
 
 `;
 
@@ -172,25 +229,25 @@ The scenario should specify:
 - What they want to express
 - The social context
 
-The prompt should feel like a real situation, not a textbook exercise. Use Southern Vietnamese context (Saigon, daily life).
+The prompt should feel like a real situation, not a textbook exercise. ${profile.scenarioFlavor}
 Put the situation in context, any English meaning to express in stimulus, and the task in instruction. Do not name the target item as the thing being tested.`
             );
 
         case "whats_wrong":
             return (
                 base +
-                `Create a Vietnamese sentence that contains ONE specific error related to the target item.
-The error should be about: wrong pronoun for the context, wrong particle, wrong register, or incorrect usage of the target item.
+                `Create a ${profile.itemLabel} sentence that contains ONE specific error related to the target item.
+The error should be about: ${profile.errorFocus}.
 Include a social context so the learner knows why it's wrong (e.g., "A student writing to their professor:").
-The sentence should otherwise be natural Vietnamese.
-Put the context in context, the incorrect Vietnamese sentence in stimulus with stimulusLabel "Sentence", and the task in instruction.
+The sentence should otherwise be natural ${profile.itemLabel}.
+Put the context in context, the incorrect ${profile.itemLabel} sentence in stimulus with stimulusLabel "Sentence", and the task in instruction.
 Do not say the target expression is correct or incorrect in the hint.`
             );
 
         case "pick_right_one":
             return (
                 base +
-                `Create a Vietnamese sentence with a blank (___) where the target item or a related word goes.
+                `Create a ${profile.itemLabel} sentence with a blank (___) where the target item or a related word goes.
 Provide 4 options — one correct answer and three plausible but incorrect alternatives.
 Include an English translation hint.
 Also include "Why?" in the prompt to encourage the learner to explain their reasoning.
@@ -201,9 +258,9 @@ The correct answer should NOT always be first — randomize position.`
         case "shift_register":
             return (
                 base +
-                `Create a correct Vietnamese sentence using the target item in one specific social context.
+                `Create a correct ${profile.itemLabel} sentence using the target item in one specific social context.
 Then ask the learner to rewrite it for a DIFFERENT social context.
-The two contexts should require meaningfully different pronoun choices, particles, or formality.
+${profile.registerShift}
 Example: casual with a friend → formal with an older coworker.
 Put the original sentence in stimulus with stimulusLabel "Source", the context shift in context, and the task in instruction.`
             );
@@ -211,7 +268,7 @@ Put the original sentence in stimulus with stimulusLabel "Source", the context s
         case "complete_thought":
             return (
                 base +
-                `Create the beginning of a Vietnamese sentence that uses or relates to the target item, then ask the learner to complete it.
+                `Create the beginning of a ${profile.itemLabel} sentence that uses or relates to the target item, then ask the learner to complete it.
 Provide context about who is speaking and what they want to say.
 The sentence start should be 3-6 words — enough to establish direction but requiring the learner to finish naturally.
 Put the context in context, the sentence beginning in stimulus with stimulusLabel "Start", and the task in instruction.`
@@ -220,16 +277,16 @@ Put the context in context, the sentence beginning in stimulus with stimulusLabe
         case "what_does_this_mean":
             return (
                 base +
-                `Create a Vietnamese sentence using the target item in a specific social context where the SUBTEXT matters more than the literal meaning.
+                `Create a ${profile.itemLabel} sentence using the target item in a specific social context where the SUBTEXT matters more than the literal meaning.
 Ask the learner to explain what the person is REALLY saying (not just translate literally).
-The context should make the subtext clear to someone who understands Vietnamese culture.
-Put the social context in context, the Vietnamese sentence in stimulus with stimulusLabel "Sentence", and the task in instruction.`
+${profile.subtextContext}
+Put the social context in context, the ${profile.itemLabel} sentence in stimulus with stimulusLabel "Sentence", and the task in instruction.`
             );
 
         case "how_would_you_say":
             return (
                 base +
-                `Create an English idea/meaning that the learner must express in Vietnamese.
+                `Create an English idea/meaning that the learner must express in ${profile.itemLabel}.
 The answer should naturally require using the target item(s).
 Include a specific social context (who they're talking to, the relationship, the setting).
 ${input.bundledLearnables?.length ? "The sentence should also naturally incorporate the scaffolding items the learner already knows well." : ""}
@@ -239,9 +296,10 @@ If relationship/register matters, put that in context; otherwise omit context. P
 }
 
 function buildGradingPrompt(input: SrsAnswerGraderInput): string {
+    const profile = getSrsLanguageProfile(input.targetLearnables);
     const targetContext = formatLearnableList(input.targetLearnables);
 
-    return `You are a Vietnamese language tutor grading a learner's answer on a review card.
+    return `You are a ${profile.tutorDescription} grading a learner's answer on a review card.
 
 Card type: ${CARD_TYPE_LABELS[input.cardType]}
 
@@ -263,10 +321,10 @@ Grade the answer on this scale:
 
 Important grading guidelines:
 - For "pick_right_one" cards: if the learner picked the right answer but gave a wrong or no explanation in the "why?" field, grade as "shaky" — correct guessing without understanding doesn't count
-- For production cards: accept valid alternative phrasings. Vietnamese has many natural ways to say things. Don't penalize regional variations or equally natural alternatives.
-- For register/pronoun cards: be strict about social correctness — using the wrong pronoun for the context is a real error even if the grammar is fine
+- For production cards: accept valid alternative phrasings. ${profile.naturalVariation}
+- ${profile.strictRule}
 - Give brief, conversational feedback in English (1-3 sentences). Sound like a helpful friend, not a test grader. If they got it right, acknowledge what was good. If wrong, explain why clearly.
-- Keep the explanatory prose in English. Vietnamese text is allowed only when quoting the learner's answer, the correct answer, or a natural alternative phrasing.
+- Keep the explanatory prose in English. ${profile.quotedTextRule}
 - If there are natural alternative phrasings worth knowing, mention one briefly.
 
 Return your grade and feedback.`;

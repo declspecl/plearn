@@ -47,6 +47,7 @@ export function ChatComposer(props: {
     activeStatus: ChatUiStatus | null;
     errorMessage?: string;
     mutationError?: string;
+    placeholder?: string;
     onDraftChange: (value: string) => void;
     onSubmit: () => void;
 }) {
@@ -65,7 +66,7 @@ export function ChatComposer(props: {
                                 props.onSubmit();
                             }
                         }}
-                        placeholder="Ask about your catalog, progress, or Vietnamese usage..."
+                        placeholder={props.placeholder ?? "Ask about your catalog, progress, or language usage..."}
                         className="max-h-64 min-h-[56px] w-full bg-transparent px-4 py-4 text-sm"
                         style={{ resize: "none" }}
                         disabled={props.disabled}

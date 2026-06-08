@@ -4,7 +4,7 @@ import { AnnotatedSentence, type WordInfo } from "./annotated-sentence";
 import { api } from "@plearn/trpc/client/react";
 import { useMemo } from "react";
 
-interface AnnotatedVietnameseTextProps {
+interface AnnotatedLearningTextProps {
     readonly text: string;
     readonly languageCode?: string;
     readonly className?: string;
@@ -31,7 +31,7 @@ function findMatchingText(sentenceLower: string, canonicalText: string, aliases:
     return canonicalText;
 }
 
-export function AnnotatedVietnameseText({ text, languageCode = "vi", className, showToneGraph }: AnnotatedVietnameseTextProps) {
+export function AnnotatedLearningText({ text, languageCode = "vi", className, showToneGraph }: AnnotatedLearningTextProps) {
     const { data: learnables } = api.learning.annotateText.useQuery({ languageCode, text }, { staleTime: 300_000 });
 
     const wordInfos = useMemo<readonly WordInfo[]>(() => {
@@ -44,6 +44,9 @@ export function AnnotatedVietnameseText({ text, languageCode = "vi", className, 
             type: learnable.type,
             notes: learnable.usageNotes,
             formula: learnable.patternTemplate,
+            reading: typeof learnable.languageMetadata.reading === "string" ? learnable.languageMetadata.reading : undefined,
+            baseForm: typeof learnable.languageMetadata.baseForm === "string" ? learnable.languageMetadata.baseForm : undefined,
+            romanization: typeof learnable.languageMetadata.romanization === "string" ? learnable.languageMetadata.romanization : undefined,
             exampleHints: learnable.examples.slice(0, 2).map((e) => ({
                 exampleText: e.exampleText,
                 translation: e.translation,
@@ -51,5 +54,15 @@ export function AnnotatedVietnameseText({ text, languageCode = "vi", className, 
         }));
     }, [learnables, text]);
 
-    return <AnnotatedSentence sentence={text} items={wordInfos} className={className} showToneGraph={showToneGraph} />;
+    return (
+        <AnnotatedSentence
+            sentence={text}
+            items={wordInfos}
+            className={className}
+            languageCode={languageCode}
+            showToneGraph={showToneGraph}
+        />
+    );
 }
+
+export const AnnotatedVietnameseText = AnnotatedLearningText;

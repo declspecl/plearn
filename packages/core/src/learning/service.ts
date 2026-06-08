@@ -27,11 +27,8 @@ import type {
     SemanticSearchInput,
     UpdateWorkspaceReviewInput,
 } from "./repository";
+import { getLanguageTextProcessor, normalizeLearnableText } from "./text-processor";
 import { performance } from "node:perf_hooks";
-
-function normalizeLearnableText(value: string): string {
-    return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
-}
 
 function logPerf(message: string, metadata: Readonly<Record<string, unknown>>) {
     console.info(`[PERF] ${message}`, metadata);
@@ -71,6 +68,26 @@ function extractPatternTemplate(proposedJson: Readonly<Record<string, unknown>>)
     }
 
     return undefined;
+}
+
+function readString(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function readStringArray(value: unknown): readonly string[] {
+    return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0) : [];
+}
+
+function languageCodeFromWorkspace(workspace: SentenceWorkspace): string {
+    return String(workspace.languageId);
+}
+
+function readLanguageMetadata(proposedJson: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+    return proposedJson.languageMetadata &&
+        typeof proposedJson.languageMetadata === "object" &&
+        !Array.isArray(proposedJson.languageMetadata)
+        ? (proposedJson.languageMetadata as Readonly<Record<string, unknown>>)
+        : {};
 }
 
 function toWorkspaceReviewJson(workspace: SentenceWorkspace): Readonly<Record<string, unknown>> {
@@ -385,15 +402,20 @@ export class SentenceAnalysisService {
         };
     }
 
-    public async explainVietnameseSentence(input: { readonly vietnameseText: string; readonly createdByUserId: string }): Promise<{
+    public async explainSentence(input: {
+        readonly languageCode: string;
+        readonly targetText: string;
+        readonly createdByUserId: string;
+    }): Promise<{
         readonly status: "explained";
         readonly workspace: SentenceWorkspace;
     }> {
         const startedAt = performance.now();
 
         const aiStartedAt = performance.now();
-        const result = await this.analyzer.explainVietnameseSentence({
-            vietnameseText: input.vietnameseText,
+        const result = await this.analyzer.explainSentence({
+            languageCode: input.languageCode,
+            targetText: input.targetText,
         });
 
         logPerf("explain.ai.generateObject", {
@@ -404,9 +426,9 @@ export class SentenceAnalysisService {
 
         const createWorkspaceStartedAt = performance.now();
         const workspace = await this.workspaces.createWorkspace({
-            languageCode: "vi",
-            sourceText: input.vietnameseText,
-            sourceLanguageCode: "vi",
+            languageCode: input.languageCode,
+            sourceText: input.targetText,
+            sourceLanguageCode: input.languageCode,
             createdByUserId: input.createdByUserId,
         });
         logPerf("explain.createWorkspace", {
@@ -452,6 +474,14 @@ export class SentenceAnalysisService {
             throw error;
         }
     }
+
+    public explainVietnameseSentence(input: { readonly vietnameseText: string; readonly createdByUserId: string }) {
+        return this.explainSentence({
+            languageCode: "vi",
+            targetText: input.vietnameseText,
+            createdByUserId: input.createdByUserId,
+        });
+    }
 }
 
 export class WorkspaceReviewService {
@@ -488,38 +518,56 @@ export class WorkspaceReviewService {
         }
 
         const savedLearnables: Learnable[] = [];
+        const languageCode = languageCodeFromWorkspace(workspace);
+        const processor = getLanguageTextProcessor(languageCode);
 
         for (const item of workspace.items) {
             if (item.reviewAction === "reject") {
                 continue;
             }
 
-            const normalizedText = normalizeLearnableText(item.proposedText);
+            const enrichedText = await processor.enrichProposalText({
+                text: item.proposedText,
+                type: item.proposedType,
+                existingMetadata: readLanguageMetadata(item.proposedJson),
+            });
+            const proposedJson: Readonly<Record<string, unknown>> = {
+                ...item.proposedJson,
+                ...(enrichedText.reading ? { reading: enrichedText.reading } : {}),
+                ...(enrichedText.baseForm ? { baseForm: enrichedText.baseForm } : {}),
+                ...(enrichedText.normalizedForm ? { normalizedForm: enrichedText.normalizedForm } : {}),
+                ...(enrichedText.romanization ? { romanization: enrichedText.romanization } : {}),
+                languageMetadata: {
+                    ...readLanguageMetadata(item.proposedJson),
+                    ...(enrichedText.languageMetadata ?? {}),
+                },
+            };
+            const normalizedText = processor.normalizeText(enrichedText.normalizedForm ?? item.proposedText);
             const current = await this.resolveLearnable(workspace, item, normalizedText);
             const exampleHints =
-                Array.isArray(item.proposedJson.exampleHints) && item.proposedJson.exampleHints.every((hint) => typeof hint === "object")
-                    ? (item.proposedJson.exampleHints as Array<{ exampleText: string; translation: string }>)
+                Array.isArray(proposedJson.exampleHints) && proposedJson.exampleHints.every((hint) => typeof hint === "object")
+                    ? (proposedJson.exampleHints as Array<{ exampleText: string; translation: string }>)
                     : [];
 
             let learnable: Learnable;
 
             if (current) {
                 const mergedAlias = normalizedText === current.normalizedText ? "" : item.proposedText;
+                const aliases = [...new Set([...current.aliases, mergedAlias, ...readStringArray(proposedJson.aliases)])].filter(Boolean);
                 learnable = await this.learnables.updateLearnable(current.id, {
                     translation: current.translation || item.proposedTranslation,
-                    partOfSpeech:
-                        typeof item.proposedJson.partOfSpeech === "string" ? item.proposedJson.partOfSpeech : current.partOfSpeech,
+                    partOfSpeech: readString(proposedJson.partOfSpeech) ?? current.partOfSpeech,
                     usageNotes: item.proposedNotes,
-                    patternTemplate: extractPatternTemplate(item.proposedJson) ?? current.patternTemplate,
+                    patternTemplate: extractPatternTemplate(proposedJson) ?? current.patternTemplate,
                     searchDocument: buildSearchDocument({
                         canonicalText: current.canonicalText,
                         translation: item.proposedTranslation,
                         usageNotes: item.proposedNotes,
-                        patternTemplate: extractPatternTemplate(item.proposedJson),
-                        aliases: [...new Set([...current.aliases, mergedAlias])].filter(Boolean),
+                        patternTemplate: extractPatternTemplate(proposedJson),
+                        aliases,
                         examples: exampleHints,
                     }),
-                    aliases: [...new Set([...current.aliases, mergedAlias])].filter(Boolean),
+                    aliases,
                     examples: [
                         ...current.examples.map((example) => ({
                             exampleText: example.exampleText,
@@ -531,6 +579,10 @@ export class WorkspaceReviewService {
                             source: "ai" as const,
                         })),
                     ],
+                    languageMetadata: {
+                        ...current.languageMetadata,
+                        ...readLanguageMetadata(proposedJson),
+                    },
                     lastSeenAt: new Date(),
                     occurrenceCount: current.occurrenceCount + 1,
                 });
@@ -540,10 +592,11 @@ export class WorkspaceReviewService {
                     canonicalText: item.proposedText,
                     translation: item.proposedTranslation,
                     usageNotes: item.proposedNotes,
-                    patternTemplate: extractPatternTemplate(item.proposedJson),
+                    patternTemplate: extractPatternTemplate(proposedJson),
                 });
 
                 const embedding = await this.embedder.embed(embeddingSourceText);
+                const aliases = readStringArray(proposedJson.aliases);
 
                 learnable = await this.learnables.createLearnable({
                     languageId: workspace.languageId,
@@ -551,28 +604,22 @@ export class WorkspaceReviewService {
                     canonicalText: item.proposedText,
                     normalizedText,
                     translation: item.proposedTranslation,
-                    partOfSpeech: typeof item.proposedJson.partOfSpeech === "string" ? item.proposedJson.partOfSpeech : undefined,
+                    partOfSpeech: readString(proposedJson.partOfSpeech),
                     usageNotes: item.proposedNotes,
-                    patternTemplate: extractPatternTemplate(item.proposedJson),
-                    difficulty:
-                        typeof item.proposedJson.difficulty === "number"
-                            ? Math.max(0, Math.min(1, item.proposedJson.difficulty))
-                            : undefined,
+                    patternTemplate: extractPatternTemplate(proposedJson),
+                    difficulty: typeof proposedJson.difficulty === "number" ? Math.max(0, Math.min(1, proposedJson.difficulty)) : undefined,
                     searchDocument: buildSearchDocument({
                         canonicalText: item.proposedText,
                         translation: item.proposedTranslation,
                         usageNotes: item.proposedNotes,
-                        patternTemplate: extractPatternTemplate(item.proposedJson),
-                        aliases: Array.isArray(item.proposedJson.aliases)
-                            ? item.proposedJson.aliases.filter((alias): alias is string => typeof alias === "string")
-                            : [],
+                        patternTemplate: extractPatternTemplate(proposedJson),
+                        aliases,
                         examples: exampleHints,
                     }),
                     embedding,
                     embeddingSourceText,
-                    aliases: Array.isArray(item.proposedJson.aliases)
-                        ? item.proposedJson.aliases.filter((alias): alias is string => typeof alias === "string")
-                        : [],
+                    languageMetadata: readLanguageMetadata(proposedJson),
+                    aliases,
                     examples: exampleHints.map((example) => ({
                         ...example,
                         source: "ai" as const,
@@ -587,14 +634,14 @@ export class WorkspaceReviewService {
                 workspaceId: workspace.id,
                 sourceSpanText: item.proposedText,
                 sourceSentenceText: workspace.sourceText,
-                rationale: typeof item.proposedJson.rationale === "string" ? item.proposedJson.rationale : undefined,
+                rationale: readString(proposedJson.rationale),
             });
 
             savedLearnables.push(learnable);
         }
 
         const savedWorkspace = await this.workspaces.markSaved(workspace.id, toWorkspaceReviewJson(workspace));
-        await this.upsertDerivedRelations(workspace, savedLearnables);
+        await this.upsertDerivedRelations(workspace, savedLearnables, languageCode);
 
         return {
             workspace: savedWorkspace,
@@ -633,8 +680,9 @@ export class WorkspaceReviewService {
         return undefined;
     }
 
-    private async upsertDerivedRelations(workspace: SentenceWorkspace, savedLearnables: readonly Learnable[]) {
+    private async upsertDerivedRelations(workspace: SentenceWorkspace, savedLearnables: readonly Learnable[], languageCode: string) {
         const learnableByNormalizedText = new Map(savedLearnables.map((learnable) => [learnable.normalizedText, learnable]));
+        const processor = getLanguageTextProcessor(languageCode);
         const relations = new Map<
             string,
             {
@@ -712,7 +760,7 @@ export class WorkspaceReviewService {
                 continue;
             }
 
-            const containerText = normalizeLearnableText(item.proposedText);
+            const containerText = processor.normalizeText(item.proposedText);
             const containerLearnable = learnableByNormalizedText.get(containerText);
             if (!containerLearnable) {
                 continue;
@@ -723,7 +771,7 @@ export class WorkspaceReviewService {
                     continue;
                 }
 
-                const candidateText = normalizeLearnableText(candidate.proposedText);
+                const candidateText = processor.normalizeText(candidate.proposedText);
                 const candidateLearnable = learnableByNormalizedText.get(candidateText);
                 if (!candidateLearnable) {
                     continue;
@@ -744,30 +792,22 @@ export class WorkspaceReviewService {
             })),
         );
 
-        await this.computeComponentRelations(workspace.languageId, savedLearnables);
+        await this.computeComponentRelations(workspace.languageId, savedLearnables, languageCode);
     }
 
-    private async computeComponentRelations(languageId: LanguageId, learnables: readonly Learnable[]) {
+    private async computeComponentRelations(languageId: LanguageId, learnables: readonly Learnable[], languageCode: string) {
         const componentRelations: {
             fromLearnableId: LearnableId;
             toLearnableId: LearnableId;
             relationType: RelatedLearnableType;
             confidence: number;
         }[] = [];
+        const processor = getLanguageTextProcessor(languageCode);
 
         for (const learnable of learnables) {
-            const words = learnable.normalizedText.trim().split(/\s+/);
-            if (words.length < 2) continue;
-
-            const subphrases: string[] = [];
-            for (let start = 0; start < words.length; start++) {
-                for (let len = 1; len <= words.length - start; len++) {
-                    if (start === 0 && len === words.length) continue;
-                    subphrases.push(words.slice(start, start + len).join(" "));
-                }
-            }
-
-            const unique = [...new Set(subphrases)];
+            const unique = (await processor.candidateLookupTexts(learnable.canonicalText)).filter(
+                (candidate) => candidate !== learnable.normalizedText,
+            );
             const matches = await this.learnables.findAllByNormalizedTexts({ languageId, normalizedTexts: unique });
 
             for (const match of matches) {
@@ -839,15 +879,7 @@ export class LearnableCatalogService {
         const language = await this.learnables.findLanguageByCode(languageCode);
         if (!language) return [];
 
-        const words = normalizeLearnableText(text).split(/\s+/).filter(Boolean);
-        const subphrases: string[] = [];
-        for (let start = 0; start < words.length; start++) {
-            for (let len = 1; len <= words.length - start; len++) {
-                subphrases.push(words.slice(start, start + len).join(" "));
-            }
-        }
-
-        const unique = [...new Set(subphrases)];
+        const unique = await getLanguageTextProcessor(languageCode).candidateLookupTexts(text);
 
         return this.learnables.findAllByNormalizedTextsOrAliases({ languageId: language.id, normalizedTexts: unique });
     }
@@ -873,7 +905,7 @@ export class LearnableCatalogService {
         const language = await this.learnables.findLanguageByCode(languageCode);
         if (!language) return null;
 
-        const normalizedText = normalizeLearnableText(text);
+        const normalizedText = getLanguageTextProcessor(languageCode).normalizeText(text);
         const matches = await this.learnables.findAllByNormalizedText({ languageId: language.id, normalizedText });
         if (matches.length > 0) return matches[0]!;
 

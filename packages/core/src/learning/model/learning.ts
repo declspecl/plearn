@@ -83,6 +83,7 @@ export interface Learnable {
     readonly searchDocument: string;
     readonly embedding?: number[];
     readonly embeddingSourceText?: string;
+    readonly languageMetadata: Readonly<Record<string, unknown>>;
     readonly occurrenceCount: number;
     readonly firstSeenAt: Date;
     readonly lastSeenAt: Date;
@@ -114,6 +115,11 @@ export interface ComponentProposal {
     readonly formula: string;
     readonly learnableType: "grammar_pattern" | "phrase";
     readonly notes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly normalizedForm?: string;
+    readonly romanization?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly exampleHints: readonly {
         readonly exampleText: string;
         readonly translation: string;
@@ -126,6 +132,11 @@ export interface WordProposal {
     readonly partOfSpeech?: string;
     readonly learnableType: "vocabulary" | "utility_word";
     readonly notes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly normalizedForm?: string;
+    readonly romanization?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly exampleHints: readonly {
         readonly exampleText: string;
         readonly translation: string;
@@ -203,6 +214,11 @@ export interface ExplanationComponentProposal {
     readonly learnableType: "grammar_pattern" | "phrase";
     readonly notes?: string;
     readonly registerNotes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly normalizedForm?: string;
+    readonly romanization?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly exampleHints: readonly {
         readonly exampleText: string;
         readonly translation: string;
@@ -217,6 +233,11 @@ export interface ExplanationWordProposal {
     readonly learnableType: "vocabulary" | "utility_word";
     readonly notes?: string;
     readonly registerNotes?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly normalizedForm?: string;
+    readonly romanization?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly exampleHints: readonly {
         readonly exampleText: string;
         readonly translation: string;
@@ -250,6 +271,7 @@ export interface CreateLearnableInput {
     readonly searchDocument: string;
     readonly embedding?: number[];
     readonly embeddingSourceText?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly aliases: readonly string[];
     readonly examples: readonly {
         readonly exampleText: string;
@@ -269,6 +291,7 @@ export interface UpdateLearnableInput {
     readonly searchDocument?: string;
     readonly embedding?: number[];
     readonly embeddingSourceText?: string;
+    readonly languageMetadata?: Readonly<Record<string, unknown>>;
     readonly aliases?: readonly string[];
     readonly examples?: readonly {
         readonly exampleText: string;

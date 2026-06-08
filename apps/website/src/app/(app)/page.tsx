@@ -14,7 +14,7 @@ export default function HomePage() {
                 </p>
             </header>
 
-            <section className="grid grid-cols-1 gap-6">
+            <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Link
                     href="/tools/vietnamese"
                     className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md xl:col-span-2"
@@ -31,6 +31,30 @@ export default function HomePage() {
                         <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
                             An auth-gated learning hub. Translate your inner monologue, extract vocabulary, and build a reusable compendium
                             of natural sentence structures.
+                        </p>
+                    </div>
+                </Link>
+                <Link
+                    href="/tools/japanese"
+                    className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col justify-between gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md"
+                >
+                    <div className="grid min-h-44 place-items-center rounded-[1.4rem] border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)]">
+                        <div className="text-center">
+                            <p className="text-[4rem] leading-none font-[var(--font-display)] tracking-[-0.06em]">日本語</p>
+                            <p className="mt-2 text-sm text-[color:var(--plearn-ink-4)]">words · readings · particles</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-foreground text-3xl font-[var(--font-display)] tracking-[-0.04em]">Japanese</h2>
+                            <div className="bg-accent text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full transition-transform duration-300 group-hover:translate-x-1">
+                                <ArrowRight className="size-5" weight="bold" />
+                            </div>
+                        </div>
+                        <p className="text-muted-foreground max-w-xl text-sm leading-relaxed">
+                            Analyze Japanese sentences, capture vocabulary with readings, and practice particles, forms, and natural
+                            phrasing.
                         </p>
                     </div>
                 </Link>

@@ -57,6 +57,7 @@ export class LearningConverter {
             searchDocument: row.searchDocument,
             embedding: row.embedding ?? undefined,
             embeddingSourceText: row.embeddingSourceText ?? undefined,
+            languageMetadata: (row.languageMetadataJson as Readonly<Record<string, unknown>> | null) ?? {},
             occurrenceCount: row.occurrenceCount,
             firstSeenAt: row.firstSeenAt,
             lastSeenAt: row.lastSeenAt,

@@ -6,18 +6,21 @@ import { z } from "zod";
 const srsCardTypeSchema = z.enum(srsCardTypes);
 
 export const srsRouter = createTRPCRouter({
-    getReviewStatus: protectedProcedure.query(async ({ ctx }) => {
-        return ctx.services.reviewSessionService.getReviewStatus(ctx.session.user.id);
-    }),
+    getReviewStatus: protectedProcedure
+        .input(z.object({ languageCode: z.string().min(2).default("vi") }).optional())
+        .query(async ({ ctx, input }) => {
+            return ctx.services.reviewSessionService.getReviewStatus(ctx.session.user.id, input?.languageCode ?? "vi");
+        }),
 
     startReviewSession: protectedProcedure
         .input(
             z.object({
                 maxCards: z.number().int().min(5).max(30).default(15),
+                languageCode: z.string().min(2).default("vi"),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            return ctx.services.reviewSessionService.startSession(ctx.session.user.id, input.maxCards);
+            return ctx.services.reviewSessionService.startSession(ctx.session.user.id, input.maxCards, input.languageCode);
         }),
 
     generateCard: protectedProcedure
@@ -69,6 +72,7 @@ export const srsRouter = createTRPCRouter({
         .input(
             z.object({
                 mode: z.enum(["weak_items", "category", "random"]),
+                languageCode: z.string().min(2).default("vi"),
                 types: z.array(z.enum(learnableTypes)).optional(),
                 limit: z.number().int().min(1).max(30).optional(),
             }),
@@ -76,6 +80,7 @@ export const srsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             return ctx.services.practiceService.startPracticeSession(ctx.session.user.id, {
                 mode: input.mode,
+                languageCode: input.languageCode,
                 types: input.types,
                 limit: input.limit,
             });

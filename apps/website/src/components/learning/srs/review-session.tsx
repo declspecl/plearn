@@ -48,6 +48,7 @@ interface SummaryState {
 
 interface ReviewSessionProps {
     readonly mode: SessionMode;
+    readonly languageCode?: string;
     readonly initialDueCount?: number;
     readonly initialNewAvailable?: number;
     readonly initialPracticeMode?: PracticeMode;
@@ -90,6 +91,7 @@ function formatPromptForGrading(card: GeneratedCardState) {
 
 export function ReviewSession({
     mode,
+    languageCode = "vi",
     initialDueCount = 0,
     initialNewAvailable = 0,
     initialPracticeMode = "weak_items",
@@ -166,9 +168,10 @@ export function ReviewSession({
         try {
             const result =
                 mode === "review"
-                    ? await startReview.mutateAsync({ maxCards: 15 })
+                    ? await startReview.mutateAsync({ maxCards: 15, languageCode })
                     : await startPractice.mutateAsync({
                           mode: practiceMode,
+                          languageCode,
                           limit: practiceLimit,
                           types: practiceMode === "category" && typeFilters.length > 0 ? [...typeFilters] : undefined,
                       });

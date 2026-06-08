@@ -68,17 +68,17 @@ export class ReviewSessionService {
         private readonly answerGrader: SrsAnswerGrader,
     ) {}
 
-    public async getReviewStatus(userId: string) {
-        const dueCount = await this.cardRepo.countDueCards(userId);
-        const introducedToday = await this.cardRepo.countIntroducedToday(userId);
+    public async getReviewStatus(userId: string, languageCode = "vi") {
+        const dueCount = await this.cardRepo.countDueCards(userId, languageCode);
+        const introducedToday = await this.cardRepo.countIntroducedToday(userId, languageCode);
         const newAvailable = Math.max(0, DEFAULT_NEW_CARDS_PER_DAY - introducedToday);
         return { dueCount, newAvailable };
     }
 
-    public async startSession(userId: string, maxCards: number = DEFAULT_MAX_CARDS): Promise<ReviewSession> {
+    public async startSession(userId: string, maxCards: number = DEFAULT_MAX_CARDS, languageCode = "vi"): Promise<ReviewSession> {
         const sessionId = randomUUID();
 
-        const dueCards = await this.cardRepo.findDueCards(userId, maxCards);
+        const dueCards = await this.cardRepo.findDueCards(userId, maxCards, languageCode);
         const cards: ReviewCard[] = dueCards.map((c) => ({
             cardId: c.id,
             learnableId: c.learnableId,
@@ -86,11 +86,11 @@ export class ReviewSessionService {
 
         const remaining = maxCards - cards.length;
         if (remaining > 0) {
-            const introducedToday = await this.cardRepo.countIntroducedToday(userId);
+            const introducedToday = await this.cardRepo.countIntroducedToday(userId, languageCode);
             const newLimit = Math.min(remaining, Math.max(0, DEFAULT_NEW_CARDS_PER_DAY - introducedToday));
 
             if (newLimit > 0) {
-                const newLearnableIds = await this.cardRepo.findNewCardsToIntroduce(userId, newLimit);
+                const newLearnableIds = await this.cardRepo.findNewCardsToIntroduce(userId, newLimit, languageCode);
                 for (const learnableId of newLearnableIds) {
                     const card = await this.cardRepo.findOrCreateCard(userId, learnableId);
                     const now = new Date();
@@ -275,6 +275,7 @@ export class PracticeService {
         userId: string,
         filter: {
             mode: "weak_items" | "category" | "random";
+            languageCode?: string;
             types?: readonly LearnableType[];
             limit?: number;
         },
@@ -285,11 +286,12 @@ export class PracticeService {
 
         switch (filter.mode) {
             case "weak_items": {
-                learnableIds = [...(await this.reviewRepo.getWeakLearnableIds(userId, limit))];
+                learnableIds = [...(await this.reviewRepo.getWeakLearnableIds(userId, limit, filter.languageCode ?? "vi"))];
                 break;
             }
             case "category": {
                 const learnables = await this.learnableRepo.listLearnables({
+                    languageCode: filter.languageCode ?? "vi",
                     types: filter.types,
                     limit,
                     sort: "frequency",
@@ -299,6 +301,7 @@ export class PracticeService {
             }
             case "random": {
                 const learnables = await this.learnableRepo.listLearnables({
+                    languageCode: filter.languageCode ?? "vi",
                     limit,
                     sort: "last_seen",
                 });

@@ -41,6 +41,9 @@ interface SentenceData {
 }
 
 interface WorkspaceEditorProps {
+    readonly languageCode?: string;
+    readonly languageName?: string;
+    readonly languageSlug?: string;
     readonly initialWorkspace?: {
         readonly id: string;
         readonly sourceText: string;
@@ -394,7 +397,12 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
     );
 }
 
-export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
+export function WorkspaceEditor({
+    initialWorkspace,
+    languageCode = "vi",
+    languageName = "Vietnamese",
+    languageSlug = "vietnamese",
+}: WorkspaceEditorProps) {
     const router = useRouter();
     const [sourceText, setSourceText] = useState(() => initialWorkspace?.sourceText ?? "");
     const [workspace, setWorkspace] = useState(initialWorkspace);
@@ -414,23 +422,24 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     const analyzeMutation = api.learning.analyzeSentence.useMutation();
     const updateMutation = api.learning.updateWorkspaceReview.useMutation();
     const saveMutation = api.learning.saveWorkspace.useMutation();
+    const analysisDraftKey = `${ANALYSIS_DRAFT_KEY}:${languageCode}`;
     const workspaceSuggestionsQuery = api.learning.getWorkspaceSuggestions.useQuery(
-        { workspaceId: workspace?.id ?? "", languageCode: "vi" },
+        { workspaceId: workspace?.id ?? "", languageCode },
         { enabled: Boolean(workspace?.id), refetchOnWindowFocus: false, staleTime: 30_000 },
     );
 
     useEffect(() => {
-        const draft = getLocalStorageItem<string>(ANALYSIS_DRAFT_KEY);
+        const draft = getLocalStorageItem<string>(analysisDraftKey);
         if (draft !== null) {
             setSourceText(draft);
         }
         setSourceDraftHydrated(true);
-    }, []);
+    }, [analysisDraftKey]);
 
     useEffect(() => {
         if (!sourceDraftHydrated) return;
-        setLocalStorageItem(ANALYSIS_DRAFT_KEY, sourceText);
-    }, [sourceDraftHydrated, sourceText]);
+        setLocalStorageItem(analysisDraftKey, sourceText);
+    }, [analysisDraftKey, sourceDraftHydrated, sourceText]);
 
     useEffect(() => {
         if (!workspace) return;
@@ -484,7 +493,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
     async function analyze(flowOverride?: typeof clarificationFlow) {
         const activeFlow = flowOverride ?? clarificationFlow;
         const nextWorkspaceResponse = await analyzeMutation.mutateAsync({
-            languageCode: "vi",
+            languageCode,
             sourceText: deferredText,
             clarifications: activeFlow.filter((c) => Boolean(c.answer)).map((c) => ({ question: c.question, answer: c.answer! })),
         });
@@ -604,7 +613,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
 
         await updateMutation.mutateAsync({
             workspaceId: workspace.id,
-            languageCode: "vi",
+            languageCode,
             reviewedAnalysisJson,
             items: workspace.items.map((item) => ({
                 id: item.id,
@@ -620,9 +629,9 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
         const result = await saveMutation.mutateAsync({ workspaceId: workspace.id });
         setSaveMessage(`Saved ${result.savedLearnables.length} learnables.`);
         removeLocalStorageItem(`${REVIEW_DRAFT_PREFIX}${workspace.id}:v1`);
-        removeLocalStorageItem(ANALYSIS_DRAFT_KEY);
+        removeLocalStorageItem(analysisDraftKey);
         startTransition(() => {
-            router.push(`/tools/vietnamese/sentences/${workspace.id}`);
+            router.push(`/tools/${languageSlug}/sentences/${workspace.id}`);
         });
     }
 
@@ -635,6 +644,9 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
             type: item.proposedType,
             notes: item.proposedNotes,
             formula: typeof item.proposedJson.formula === "string" ? item.proposedJson.formula : undefined,
+            reading: typeof item.proposedJson.reading === "string" ? item.proposedJson.reading : undefined,
+            baseForm: typeof item.proposedJson.baseForm === "string" ? item.proposedJson.baseForm : undefined,
+            romanization: typeof item.proposedJson.romanization === "string" ? item.proposedJson.romanization : undefined,
             exampleHints: Array.isArray(item.proposedJson.exampleHints)
                 ? (item.proposedJson.exampleHints as Array<{ exampleText: string; translation: string }>)
                 : [],
@@ -653,7 +665,7 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                         className="text-foreground field-sizing-content min-h-36 w-full resize-y rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 text-base transition-colors outline-none focus:border-white/18"
                         data-slot="textarea"
                         maxLength={500}
-                        placeholder="What if I had never heard that? Wouldn't that be crazy?"
+                        placeholder={`I want to say this naturally in ${languageName}...`}
                         value={sourceText}
                         onChange={(event) => setSourceText(event.target.value)}
                         onKeyDown={(event) => {
@@ -793,13 +805,16 @@ export function WorkspaceEditor({ initialWorkspace }: WorkspaceEditorProps) {
                                 <AnnotatedSentence
                                     sentence={sentenceData.text}
                                     items={wordInfoItems}
+                                    languageCode={languageCode}
                                     showToneGraph={true}
                                     className="text-[1.95rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em]"
                                 />
                                 <p className="text-sm text-[color:var(--plearn-ink-3)]">{sentenceData.meaning}</p>
-                                <div className="border-t border-[color:var(--border)] pt-4">
-                                    <ToneLegend />
-                                </div>
+                                {languageCode === "vi" ? (
+                                    <div className="border-t border-[color:var(--border)] pt-4">
+                                        <ToneLegend />
+                                    </div>
+                                ) : null}
                             </div>
                         </section>
                     ) : workspace.summary ? (

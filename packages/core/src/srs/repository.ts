@@ -30,18 +30,18 @@ export interface CreateSrsReviewInput {
 
 export interface SrsCardRepository {
     findOrCreateCard(userId: string, learnableId: LearnableId): Promise<SrsCard>;
-    findDueCards(userId: string, limit: number): Promise<readonly SrsCard[]>;
-    countDueCards(userId: string): Promise<number>;
+    findDueCards(userId: string, limit: number, languageCode?: string): Promise<readonly SrsCard[]>;
+    countDueCards(userId: string, languageCode?: string): Promise<number>;
     updateCard(id: SrsCardId, update: SrsCardUpdate): Promise<SrsCard>;
-    findNewCardsToIntroduce(userId: string, limit: number): Promise<readonly LearnableId[]>;
+    findNewCardsToIntroduce(userId: string, limit: number, languageCode?: string): Promise<readonly LearnableId[]>;
     getCardsByLearnableIds(userId: string, learnableIds: readonly LearnableId[]): Promise<readonly SrsCard[]>;
     getCardByLearnableId(userId: string, learnableId: LearnableId): Promise<SrsCard | undefined>;
-    countIntroducedToday(userId: string): Promise<number>;
+    countIntroducedToday(userId: string, languageCode?: string): Promise<number>;
 }
 
 export interface SrsReviewRepository {
     createReview(input: CreateSrsReviewInput): Promise<SrsReview>;
     listReviewsBySession(userId: string, sessionId: string): Promise<readonly SrsReview[]>;
     getRecentGradesForLearnable(userId: string, learnableId: LearnableId, limit: number): Promise<readonly SrsGrade[]>;
-    getWeakLearnableIds(userId: string, limit: number): Promise<readonly LearnableId[]>;
+    getWeakLearnableIds(userId: string, limit: number, languageCode?: string): Promise<readonly LearnableId[]>;
 }

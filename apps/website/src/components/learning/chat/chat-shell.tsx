@@ -26,8 +26,14 @@ async function copyPartial(message: ChatMessage) {
     await navigator.clipboard.writeText(message.content);
 }
 
-export function ChatShell() {
-    const controller = useChatController();
+export function ChatShell({
+    languageCode = "vi",
+    languageName = "Vietnamese",
+}: {
+    readonly languageCode?: string;
+    readonly languageName?: string;
+}) {
+    const controller = useChatController(languageCode);
     const listRef = useRef<HTMLDivElement | null>(null);
     const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
     const [threadToRename, setThreadToRename] = useState<ChatThreadSummary | null>(null);
@@ -50,7 +56,7 @@ export function ChatShell() {
                 <header className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--border)] px-4 md:hidden">
                     <div className="flex items-center gap-2">
                         <ChatsCircle className="h-4 w-4" />
-                        <h1 className="text-sm font-medium">Vietnamese Chat</h1>
+                        <h1 className="text-sm font-medium">{languageName} Chat</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
@@ -93,6 +99,7 @@ export function ChatShell() {
                     <ChatMessageList
                         messages={controller.activeMessages}
                         activeRun={controller.state.activeRun}
+                        emptyText={`Start a thread and ask about your ${languageName} learning data.`}
                         onRetry={(messageId) => void controller.submit({ retryMessageId: messageId })}
                         onCopyPartial={(message) => void copyPartial(message)}
                     />
@@ -105,6 +112,7 @@ export function ChatShell() {
                     activeStatus={controller.state.activeRun?.status ?? null}
                     errorMessage={controller.state.errorMessage}
                     mutationError={controller.state.mutationError}
+                    placeholder={`Ask about your catalog, progress, or ${languageName} usage...`}
                     onDraftChange={controller.setDraft}
                     onSubmit={() => void controller.submit()}
                 />

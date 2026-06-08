@@ -1,7 +1,7 @@
 import type { ChatThreadRecord } from "@/lib/server/chat/persistence/repository";
 import "server-only";
 
-export type ChatResponseLanguage = "english" | "vietnamese";
+export type ChatResponseLanguage = "english" | "vietnamese" | "japanese";
 
 function stripQuotedContent(message: string) {
     return message
@@ -19,6 +19,10 @@ function prefersVietnameseResponse(message: string) {
     );
 }
 
+function prefersJapaneseResponse(message: string) {
+    return /\b(answer|reply|respond|write|speak)\b[\s\S]{0,24}\b(in )?(japanese|日本語)\b/i.test(message) || /日本語で/.test(message);
+}
+
 function prefersEnglishResponse(message: string) {
     return (
         /\b(answer|reply|respond|write|speak)\b[\s\S]{0,24}\b(in )?english\b/i.test(message) ||
@@ -28,6 +32,10 @@ function prefersEnglishResponse(message: string) {
 
 function containsVietnameseSignal(message: string) {
     return /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(message);
+}
+
+function containsJapaneseSignal(message: string) {
+    return /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(message);
 }
 
 function containsEnglishSignal(message: string) {
@@ -46,12 +54,20 @@ function hasVietnameseInstructionSignal(message: string) {
     return /\b(giải thích|dịch|đánh dấu|chú thích|tóm tắt|phân tích|giúp|cho mình biết|mình mới học gì)\b/i.test(message);
 }
 
+function hasJapaneseInstructionSignal(message: string) {
+    return /(説明|翻訳|訳して|解析|分析|要約|教えて|日本語で)/.test(message);
+}
+
 function classifyDirectLanguage(message: string): ChatResponseLanguage | null {
     const wrapperText = stripQuotedContent(message);
     const textForSignals = wrapperText || message;
 
     if (prefersVietnameseResponse(textForSignals)) {
         return "vietnamese";
+    }
+
+    if (prefersJapaneseResponse(textForSignals)) {
+        return "japanese";
     }
 
     if (prefersEnglishResponse(textForSignals)) {
@@ -66,8 +82,16 @@ function classifyDirectLanguage(message: string): ChatResponseLanguage | null {
         return "vietnamese";
     }
 
+    if (hasJapaneseInstructionSignal(textForSignals)) {
+        return "japanese";
+    }
+
     if (containsVietnameseSignal(textForSignals)) {
         return "vietnamese";
+    }
+
+    if (containsJapaneseSignal(textForSignals)) {
+        return "japanese";
     }
 
     if (containsEnglishSignal(message)) {
@@ -102,11 +126,11 @@ function looksLikeRawLearningContent(message: string) {
         return true;
     }
 
-    if (hasEnglishInstructionSignal(trimmed) || hasVietnameseInstructionSignal(trimmed)) {
+    if (hasEnglishInstructionSignal(trimmed) || hasVietnameseInstructionSignal(trimmed) || hasJapaneseInstructionSignal(trimmed)) {
         return false;
     }
 
-    return containsVietnameseSignal(trimmed);
+    return containsVietnameseSignal(trimmed) || containsJapaneseSignal(trimmed);
 }
 
 function previousTurnAskedForTextPayload(recentUserMessages: readonly string[]) {
@@ -117,7 +141,8 @@ function previousTurnAskedForTextPayload(recentUserMessages: readonly string[]) 
 
     return (
         /\b(annotate|translate|explain|review|analyze|summarize)\b/i.test(previous) ||
-        /\b(đánh dấu|chú thích|dịch|giải thích|phân tích|tóm tắt)\b/i.test(previous)
+        /\b(đánh dấu|chú thích|dịch|giải thích|phân tích|tóm tắt)\b/i.test(previous) ||
+        /(説明|翻訳|訳して|解析|分析|要約|注釈)/.test(previous)
     );
 }
 
@@ -144,7 +169,14 @@ export function detectResponseLanguage(input: {
         return contextLanguage;
     }
 
-    return input.threadLanguageCode.startsWith("vi") ? "vietnamese" : "english";
+    if (input.threadLanguageCode.startsWith("vi")) return "vietnamese";
+    if (input.threadLanguageCode.startsWith("ja")) return "japanese";
+
+    return "english";
+}
+
+function languageNameForCode(languageCode: string) {
+    return languageCode.startsWith("ja") ? "Japanese" : "Vietnamese";
 }
 
 export function buildSystemPrompt(input: {
@@ -158,15 +190,18 @@ export function buildSystemPrompt(input: {
         threadLanguageCode: input.thread.languageCode,
         recentUserMessages: input.recentUserMessages,
     });
+    const learningLanguageName = languageNameForCode(input.thread.languageCode);
 
     return [
-        "You are Plearn's Vietnamese learning assistant.",
+        `You are Plearn's ${learningLanguageName} learning assistant.`,
         "You can call tools to fetch user-scoped learning data and catalog data.",
         "Do not fabricate facts. If a fact requires retrieval, use the appropriate tool.",
         "Match the user's language for the surrounding narration and explanation.",
         responseLanguage === "english"
-            ? "For this turn, write the surrounding explanation entirely in English. Only use Vietnamese for quoted examples, translations, vocabulary items, or sentences the user explicitly asked to see. Do not switch the main prose into Vietnamese."
-            : "For this turn, write the surrounding explanation in Vietnamese and prefer natural Southern Vietnamese phrasing.",
+            ? `For this turn, write the surrounding explanation entirely in English. Only use ${learningLanguageName} for quoted examples, translations, vocabulary items, or sentences the user explicitly asked to see. Do not switch the main prose into ${learningLanguageName}.`
+            : responseLanguage === "japanese"
+              ? "For this turn, write the surrounding explanation in Japanese. Prefer natural, clear Japanese suitable for a learner."
+              : "For this turn, write the surrounding explanation in Vietnamese and prefer natural Southern Vietnamese phrasing.",
         "For greetings or casual small-talk, reply briefly and do not use tools.",
         "Do not claim you checked data unless you actually retrieved it in this turn.",
         "If a tool returns ok=false, briefly explain what failed and either continue with what you do know or ask the user to retry.",

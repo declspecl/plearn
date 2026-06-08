@@ -2,7 +2,10 @@ import { createDatabaseClient } from "../../db/src/client";
 import { learningLanguages } from "../../db/src/schema";
 import { eq } from "drizzle-orm";
 
-const LANGUAGES = [{ id: "vi", code: "vi", name: "Vietnamese" }];
+const LANGUAGES = [
+    { id: "vi", code: "vi", name: "Vietnamese" },
+    { id: "ja", code: "ja", name: "Japanese" },
+];
 
 async function main(): Promise<void> {
     const databaseUrl = process.env.DATABASE_URL;

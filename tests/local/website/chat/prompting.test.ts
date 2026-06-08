@@ -26,6 +26,10 @@ describe("chat prompting", () => {
         expect(detectResponseLanguage({ message: "mình mới học gì gần đây vậy?", threadLanguageCode: "vi" })).toBe("vietnamese");
     });
 
+    it("detects Japanese turns from Japanese text", () => {
+        expect(detectResponseLanguage({ message: "最近何を勉強しましたか？", threadLanguageCode: "ja" })).toBe("japanese");
+    });
+
     it("inherits English narration when the previous turn asked for text to annotate", () => {
         expect(
             detectResponseLanguage({
@@ -56,6 +60,16 @@ describe("chat prompting", () => {
         ).toBe("english");
     });
 
+    it("inherits English narration when a Japanese payload follows an English annotation request", () => {
+        expect(
+            detectResponseLanguage({
+                message: "私は寿司を食べます。",
+                threadLanguageCode: "ja",
+                recentUserMessages: ["can you annotate some text?"],
+            }),
+        ).toBe("english");
+    });
+
     it("builds an English narration instruction for English turns", () => {
         const prompt = buildSystemPrompt({
             thread: baseThread,
@@ -67,5 +81,18 @@ describe("chat prompting", () => {
         expect(prompt).toContain("Detected response language for this turn: english.");
         expect(prompt).toContain("write the surrounding explanation entirely in English");
         expect(prompt).toContain("Do not switch the main prose into Vietnamese.");
+    });
+
+    it("builds a Japanese narration instruction for Japanese turns", () => {
+        const prompt = buildSystemPrompt({
+            thread: { ...baseThread, languageCode: "ja" },
+            summary: null,
+            userMessage: "日本語で説明して",
+            recentUserMessages: [],
+        });
+
+        expect(prompt).toContain("You are Plearn's Japanese learning assistant.");
+        expect(prompt).toContain("Detected response language for this turn: japanese.");
+        expect(prompt).toContain("write the surrounding explanation in Japanese");
     });
 });

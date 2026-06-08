@@ -11,6 +11,7 @@ import type {
     SentenceWorkspaceRepository,
     UpdateWorkspaceReviewInput,
 } from "@plearn/core/learning/repository";
+import { getLanguageTextProcessor } from "@plearn/core/learning/text-processor";
 import type { DatabaseInstance } from "@plearn/db/client";
 import {
     learningLanguages,
@@ -41,8 +42,8 @@ function logQueryTiming(method: string, start: number) {
     }
 }
 
-function normalizeQuery(value: string): string {
-    return value.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase();
+function normalizeForLanguage(languageCodeOrId: string, value: string): string {
+    return getLanguageTextProcessor(languageCodeOrId).normalizeText(value);
 }
 
 function createRelationRowId(fromLearnableId: string, toLearnableId: string, relationType: string): string {
@@ -535,6 +536,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
                 searchDocument: input.searchDocument,
                 embedding: input.embedding,
                 embeddingSourceText: input.embeddingSourceText,
+                languageMetadataJson: input.languageMetadata ?? {},
                 occurrenceCount: 1,
                 firstSeenAt: input.firstSeenAt,
                 lastSeenAt: input.lastSeenAt,
@@ -574,6 +576,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
                 searchDocument: input.searchDocument,
                 embedding: input.embedding,
                 embeddingSourceText: input.embeddingSourceText,
+                languageMetadataJson: input.languageMetadata,
                 occurrenceCount: input.occurrenceCount,
                 lastSeenAt: input.lastSeenAt,
                 updatedAt: new Date(),
@@ -832,7 +835,9 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
             return {};
         }
 
-        const normalizedByItemId = new Map(input.items.map((item) => [item.workspaceItemId, normalizeQuery(item.query)] as const));
+        const normalizedByItemId = new Map(
+            input.items.map((item) => [item.workspaceItemId, normalizeForLanguage(input.languageCode, item.query)] as const),
+        );
         const normalizedValues = [...new Set(normalizedByItemId.values())];
         const requestedTypes = [...new Set(input.items.map((item) => item.type))];
 
@@ -1045,7 +1050,7 @@ export class LearningFacade implements SentenceWorkspaceRepository, LearnableRep
                 learnableId,
                 languageId,
                 aliasText: alias,
-                normalizedAliasText: alias.normalize("NFKC").trim().replaceAll(/\s+/g, " ").toLowerCase(),
+                normalizedAliasText: normalizeForLanguage(languageId, alias),
             })),
         );
     }

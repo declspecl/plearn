@@ -47,6 +47,20 @@ export const learningRouter = createTRPCRouter({
                 createdByUserId: ctx.session.user.id,
             });
         }),
+    explainSentence: protectedProcedure
+        .input(
+            z.object({
+                languageCode: z.string().min(2),
+                targetText: z.string().min(1).max(1000),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            return ctx.services.sentenceAnalysisService.explainSentence({
+                languageCode: input.languageCode,
+                targetText: input.targetText,
+                createdByUserId: ctx.session.user.id,
+            });
+        }),
     getWorkspace: protectedProcedure
         .input(
             z.object({

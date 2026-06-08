@@ -20,6 +20,10 @@ const analysisSchema = z.object({
             formula: z.string(),
             learnableType: z.enum(["grammar_pattern", "phrase"]),
             notes: z.string().optional(),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
             exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
         }),
     ),
@@ -30,6 +34,10 @@ const analysisSchema = z.object({
             partOfSpeech: z.string().optional(),
             learnableType: z.enum(["vocabulary", "utility_word"]),
             notes: z.string().optional(),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
             exampleHints: z.array(z.object({ exampleText: z.string(), translation: z.string() })).default([]),
         }),
     ),
@@ -46,6 +54,10 @@ const basicAnalysisSchema = z.object({
             meaning: z.string(),
             formula: z.string(),
             learnableType: z.enum(["grammar_pattern", "phrase"]),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
         }),
     ),
     words: z.array(
@@ -54,6 +66,10 @@ const basicAnalysisSchema = z.object({
             meaning: z.string(),
             partOfSpeech: z.string().optional(),
             learnableType: z.enum(["vocabulary", "utility_word"]),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
         }),
     ),
 });
@@ -134,6 +150,10 @@ const basicExplanationSchema = z.object({
             literalMeaning: z.string().optional(),
             formula: z.string(),
             learnableType: z.enum(["grammar_pattern", "phrase"]),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
         }),
     ),
     words: z.array(
@@ -143,6 +163,10 @@ const basicExplanationSchema = z.object({
             literalMeaning: z.string().optional(),
             partOfSpeech: z.string().optional(),
             learnableType: z.enum(["vocabulary", "utility_word"]),
+            reading: z.string().optional(),
+            baseForm: z.string().optional(),
+            normalizedForm: z.string().optional(),
+            romanization: z.string().optional(),
         }),
     ),
     idioms: z.array(
@@ -196,6 +220,27 @@ function buildPass1Prompt(input: {
     const previousClarifications = input.clarifications?.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n") ?? "";
     const clarificationContext = previousClarifications ? `\n\nPrevious Clarifications:\n${previousClarifications}` : "";
 
+    if (input.languageCode === "ja") {
+        return [
+            "You are decomposing an English sentence into Japanese learning units for an English-speaking learner.",
+            "If the English source is underspecified, choose natural, neutral contemporary Japanese. Ask for clarification only when the missing information materially changes politeness level, relationship, or meaning.",
+            "If you ask for clarification, the clarification question and every option label MUST be in English.",
+            "If the text is unambiguous enough, set status to 'analyzed'.",
+            "This is pass 1. Return only the core structure, not enrichment.",
+            "Return 3 sections in the analysis:",
+            "1. sentence: the full natural Japanese translation with its English meaning.",
+            "2. components: phrases, structures, conjugation patterns, particles in construction, counters, and grammar patterns. Each has Japanese text, English meaning, and a formula showing usage/structure. Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for fixed expressions.",
+            "3. words: individual Japanese lexical or utility items. Set learnableType to 'vocabulary' for content words or 'utility_word' for particles, auxiliaries, conjunctions, copula forms, counters, and common function words.",
+            "For Japanese items, include reading in hiragana when kanji appears, baseForm for inflected verbs/adjectives, romanization when useful, and partOfSpeech for words.",
+            "Do not include a word in both components and words if it is already captured as a component.",
+            "Do not include notes or example hints in pass 1.",
+            "Do not invent duplicate items unless they are genuinely different learnable concepts.",
+            `Target language code: ${input.languageCode}`,
+            `Sentence: ${input.sourceText}`,
+            clarificationContext,
+        ].join("\n");
+    }
+
     return [
         "You are decomposing an English sentence into Southern Vietnamese learning units.",
         "Vietnamese social registers and pronouns (anh, chị, em, bạn, mày, tôi, etc.) are CRITICAL. If the source text contains pronouns like 'I', 'you', 'he', 'she', or 'they' and the relationship/relative ages are unknown, you MUST set status to 'clarification_needed'.",
@@ -216,7 +261,22 @@ function buildPass1Prompt(input: {
     ].join("\n");
 }
 
-function buildPass2Prompt(input: { readonly sourceText: string; readonly analysis: BasicAnalysis }) {
+function buildPass2Prompt(input: { readonly languageCode: string; readonly sourceText: string; readonly analysis: BasicAnalysis }) {
+    if (input.languageCode === "ja") {
+        return [
+            "You are enriching an existing Japanese sentence decomposition.",
+            "Keep the existing translation, components, words, meanings, formulas, readings, base forms, types, and part-of-speech decisions exactly as given.",
+            "Do not add, remove, rename, merge, or reorder items.",
+            "For each item, return only:",
+            "- index: the original zero-based index",
+            "- notes: optional concise usage nuance in English, especially particles, conjugation, politeness, omitted subjects, counters, or naturalness",
+            "- exampleHints: 0-2 short Japanese examples with English translations",
+            "Leave notes empty if there is no useful extra nuance. Leave exampleHints empty unless they add clear learning value.",
+            `Source sentence: ${input.sourceText}`,
+            `Existing analysis JSON: ${JSON.stringify(input.analysis)}`,
+        ].join("\n");
+    }
+
     return [
         "You are enriching an existing Southern Vietnamese sentence decomposition.",
         "Keep the existing translation, components, words, meanings, formulas, types, and part-of-speech decisions exactly as given.",
@@ -255,7 +315,25 @@ function mergeEnrichment(analysis: BasicAnalysis, enrichment: Enrichment): Analy
     };
 }
 
-function buildExplainPass1Prompt(input: { readonly vietnameseText: string }) {
+function buildExplainPass1Prompt(input: { readonly languageCode: string; readonly targetText: string }) {
+    if (input.languageCode === "ja") {
+        return [
+            "You are explaining a Japanese sentence to an English-speaking learner.",
+            "The input IS Japanese. Your job is comprehension, not translation generation. Decompose the observed Japanese surface form directly.",
+            "Return the following sections:",
+            "1. sentence: the original Japanese text, a natural English gloss, and an optional literal gloss when it differs meaningfully from the natural one.",
+            "2. components: phrases, structures, conjugation patterns, particle constructions, counters, and grammar patterns found in the sentence. Each has Japanese text, English meaning, optional literal meaning, and a formula showing usage/structure. Set learnableType to 'grammar_pattern' for structural patterns or 'phrase' for idiomatic/fixed expressions.",
+            "3. words: individual Japanese lexical or utility items with English meaning and part of speech. Set learnableType to 'vocabulary' for content words or 'utility_word' for particles, auxiliaries, copula forms, conjunctions, counters, and other function words.",
+            "4. idioms: any fixed expressions, idioms, or collocations. For each, provide the Japanese text, what it literally means, and what it actually means.",
+            "5. registerCommentary: optional. Comment on politeness level, formality, written/spoken feel, and social context.",
+            "6. pronounNotes: optional. Use this for omitted subjects, implied speaker/listener, or pronouns only when relevant.",
+            "7. structuralNotes: optional. Note particles, conjugations, omitted subjects/objects, counters, word order, or features a learner might miss.",
+            "For Japanese items, include reading in hiragana when kanji appears, baseForm for inflected verbs/adjectives, romanization when useful, and partOfSpeech for words.",
+            "This is pass 1. Return only the core structure. Do not include notes, registerNotes, or exampleHints.",
+            `Japanese sentence: ${input.targetText}`,
+        ].join("\n");
+    }
+
     return [
         "You are explaining a Vietnamese sentence to an English-speaking learner of Southern Vietnamese.",
         "The input IS Vietnamese. Your job is comprehension, not translation generation. Decompose the observed Vietnamese surface form directly.",
@@ -269,11 +347,33 @@ function buildExplainPass1Prompt(input: { readonly vietnameseText: string }) {
         "7. structuralNotes: optional. Note omitted subjects, sentence-final particles, Southern-specific vocabulary or phrasing, or any structural features a learner might miss.",
         "Focus on Southern Vietnamese. Flag Northern or formal alternatives only when the input uses them unexpectedly.",
         "This is pass 1. Return only the core structure. Do not include notes, registerNotes, or exampleHints.",
-        `Vietnamese sentence: ${input.vietnameseText}`,
+        `Vietnamese sentence: ${input.targetText}`,
     ].join("\n");
 }
 
-function buildExplainPass2Prompt(input: { readonly vietnameseText: string; readonly explanation: BasicExplanation }) {
+function buildExplainPass2Prompt(input: {
+    readonly languageCode: string;
+    readonly targetText: string;
+    readonly explanation: BasicExplanation;
+}) {
+    if (input.languageCode === "ja") {
+        return [
+            "You are enriching an existing Japanese sentence explanation.",
+            "Keep all existing fields exactly as given. Do not add, remove, rename, merge, or reorder items.",
+            "For each component and word, return only:",
+            "- index: the original zero-based index",
+            "- notes: optional concise usage nuance in English",
+            "- registerNotes: optional note on politeness, formality, written/spoken feel, or social connotation of this specific item",
+            "- exampleHints: 0-2 short Japanese examples with English translations",
+            "For each idiom, return only:",
+            "- index: the original zero-based index",
+            "- notes: optional additional context",
+            "Leave fields empty if there is no useful extra nuance.",
+            `Source sentence: ${input.targetText}`,
+            `Existing explanation JSON: ${JSON.stringify(input.explanation)}`,
+        ].join("\n");
+    }
+
     return [
         "You are enriching an existing Vietnamese sentence explanation.",
         "Keep all existing fields exactly as given. Do not add, remove, rename, merge, or reorder items.",
@@ -286,7 +386,7 @@ function buildExplainPass2Prompt(input: { readonly vietnameseText: string; reado
         "- index: the original zero-based index",
         "- notes: optional additional context",
         "Leave fields empty if there is no useful extra nuance.",
-        `Source sentence: ${input.vietnameseText}`,
+        `Source sentence: ${input.targetText}`,
         `Existing explanation JSON: ${JSON.stringify(input.explanation)}`,
     ].join("\n");
 }
@@ -593,7 +693,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
                 clarification: pass1Result.object.clarification,
                 modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
                 modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-                promptVersion: "v5",
+                promptVersion: `${input.languageCode}-analysis-v1`,
             };
         }
 
@@ -606,6 +706,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
                 model: getAnalysisModel(),
                 schema: enrichmentSchema,
                 prompt: buildPass2Prompt({
+                    languageCode: input.languageCode,
                     sourceText: input.sourceText,
                     analysis: pass1Result.object.analysis,
                 }),
@@ -652,11 +753,11 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             analysis,
             modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
             modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-            promptVersion: "v5",
+            promptVersion: `${input.languageCode}-analysis-v1`,
         };
     }
 
-    public async explainVietnameseSentence(input: { vietnameseText: string }) {
+    public async explainSentence(input: { languageCode: string; targetText: string }) {
         const appConfig = getAppConfig();
         const pass1Prompt = buildExplainPass1Prompt(input);
 
@@ -692,7 +793,8 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
                 model: getAnalysisModel(),
                 schema: explanationEnrichmentSchema,
                 prompt: buildExplainPass2Prompt({
-                    vietnameseText: input.vietnameseText,
+                    languageCode: input.languageCode,
+                    targetText: input.targetText,
                     explanation: pass1Result.object,
                 }),
                 maxRetries: appConfig.LEARNING_ANALYSIS_MAX_RETRIES,
@@ -740,7 +842,7 @@ export class VercelAiLearningAnalyzer implements LearningAnalyzer {
             explanation,
             modelProvider: appConfig.LEARNING_ANALYSIS_PROVIDER,
             modelId: appConfig.LEARNING_ANALYSIS_MODEL,
-            promptVersion: "explain-v1",
+            promptVersion: `${input.languageCode}-explain-v1`,
         };
     }
 }

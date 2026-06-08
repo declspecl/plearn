@@ -31,10 +31,38 @@ export interface LearnableHint {
     readonly type: LearnableType;
     readonly notes: string;
     readonly formula?: string;
+    readonly reading?: string;
+    readonly baseForm?: string;
+    readonly romanization?: string;
     readonly exampleHints: readonly { readonly exampleText: string; readonly translation: string }[];
 }
 
-export function LearnableHoverText({ hint, className }: { hint: LearnableHint; className?: string }) {
+function LearningText({ text, reading, languageCode }: { text: string; reading?: string; languageCode: string }) {
+    if (languageCode === "vi") {
+        return <ToneColoredText text={text} />;
+    }
+
+    if (languageCode === "ja" && reading && reading !== text) {
+        return (
+            <ruby>
+                {text}
+                <rt className="text-[0.55em] text-[color:var(--plearn-ink-4)]">{reading}</rt>
+            </ruby>
+        );
+    }
+
+    return <>{text}</>;
+}
+
+export function LearnableHoverText({
+    hint,
+    className,
+    languageCode = "vi",
+}: {
+    hint: LearnableHint;
+    className?: string;
+    languageCode?: string;
+}) {
     const [hasOpened, setHasOpened] = useState(false);
 
     const wordInfo = {
@@ -43,6 +71,9 @@ export function LearnableHoverText({ hint, className }: { hint: LearnableHint; c
         type: hint.type,
         notes: hint.notes,
         formula: hint.formula,
+        reading: hint.reading,
+        baseForm: hint.baseForm,
+        romanization: hint.romanization,
         exampleHints: hint.exampleHints,
     };
 
@@ -53,10 +84,10 @@ export function LearnableHoverText({ hint, className }: { hint: LearnableHint; c
             }}
         >
             <HoverCardTrigger delay={150} className={className} render={<span />}>
-                <ToneColoredText text={hint.text} />
+                <LearningText text={hint.text} reading={hint.reading} languageCode={languageCode} />
             </HoverCardTrigger>
             <HoverCardContent side="top" sideOffset={6} className="w-64">
-                <WordPopoverContent wordInfo={wordInfo} text={hint.text} enabled={hasOpened} />
+                <WordPopoverContent wordInfo={wordInfo} text={hint.text} enabled={hasOpened} languageCode={languageCode} />
             </HoverCardContent>
         </HoverCard>
     );

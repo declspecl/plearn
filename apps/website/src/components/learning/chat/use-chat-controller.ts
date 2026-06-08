@@ -29,7 +29,7 @@ function didRecoverClosedStream(detail: ChatThreadDetail | null, assistantMessag
     return detail.messages.some((message) => message.id === assistantMessageId && message.status !== "streaming");
 }
 
-export function useChatController(): ChatController {
+export function useChatController(languageCode = "vi"): ChatController {
     const [state, dispatch] = useReducer(chatReducer, initialChatState);
     const stateRef = useRef(state);
     const textBufferRef = useRef("");
@@ -154,7 +154,7 @@ export function useChatController(): ChatController {
         const response = await fetch("/api/chat/threads", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ languageCode: "vi" }),
+            body: JSON.stringify({ languageCode }),
         });
 
         if (!response.ok) {

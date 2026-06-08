@@ -47,34 +47,38 @@ export class SrsFacade implements SrsCardRepository, SrsReviewRepository {
         return this.converter.convertCard(row);
     }
 
-    public async findDueCards(userId: string, limit: number) {
+    public async findDueCards(userId: string, limit: number, languageCode?: string) {
         const now = new Date();
         const rows = await this.database
-            .select()
+            .select({ card: learningSrsCards })
             .from(learningSrsCards)
+            .innerJoin(learningLearnables, eq(learningSrsCards.learnableId, learningLearnables.id))
             .where(
                 and(
                     eq(learningSrsCards.userId, userId),
                     inArray(learningSrsCards.status, ["active", "graduated"]),
                     lte(learningSrsCards.nextReviewAt, now),
+                    languageCode ? eq(learningLearnables.languageId, languageCode) : undefined,
                 ),
             )
             .orderBy(asc(learningSrsCards.nextReviewAt))
             .limit(limit);
 
-        return rows.map((r) => this.converter.convertCard(r));
+        return rows.map((r) => this.converter.convertCard(r.card));
     }
 
-    public async countDueCards(userId: string) {
+    public async countDueCards(userId: string, languageCode?: string) {
         const now = new Date();
         const [result] = await this.database
             .select({ count: count() })
             .from(learningSrsCards)
+            .innerJoin(learningLearnables, eq(learningSrsCards.learnableId, learningLearnables.id))
             .where(
                 and(
                     eq(learningSrsCards.userId, userId),
                     inArray(learningSrsCards.status, ["active", "graduated"]),
                     lte(learningSrsCards.nextReviewAt, now),
+                    languageCode ? eq(learningLearnables.languageId, languageCode) : undefined,
                 ),
             );
 
@@ -102,12 +106,18 @@ export class SrsFacade implements SrsCardRepository, SrsReviewRepository {
         return this.converter.convertCard(row);
     }
 
-    public async findNewCardsToIntroduce(userId: string, limit: number) {
+    public async findNewCardsToIntroduce(userId: string, limit: number, languageCode?: string) {
         const rows = await this.database
             .select({ learnableId: learningLearnables.id })
             .from(learningLearnables)
             .leftJoin(learningSrsCards, and(eq(learningSrsCards.learnableId, learningLearnables.id), eq(learningSrsCards.userId, userId)))
-            .where(and(isNull(learningSrsCards.id), isNull(learningLearnables.archivedAt)))
+            .where(
+                and(
+                    isNull(learningSrsCards.id),
+                    isNull(learningLearnables.archivedAt),
+                    languageCode ? eq(learningLearnables.languageId, languageCode) : undefined,
+                ),
+            )
             .orderBy(desc(learningLearnables.occurrenceCount))
             .limit(limit);
 
@@ -135,14 +145,21 @@ export class SrsFacade implements SrsCardRepository, SrsReviewRepository {
         return row ? this.converter.convertCard(row) : undefined;
     }
 
-    public async countIntroducedToday(userId: string) {
+    public async countIntroducedToday(userId: string, languageCode?: string) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
 
         const [result] = await this.database
             .select({ count: count() })
             .from(learningSrsCards)
-            .where(and(eq(learningSrsCards.userId, userId), gte(learningSrsCards.introducedAt, todayStart)));
+            .innerJoin(learningLearnables, eq(learningSrsCards.learnableId, learningLearnables.id))
+            .where(
+                and(
+                    eq(learningSrsCards.userId, userId),
+                    gte(learningSrsCards.introducedAt, todayStart),
+                    languageCode ? eq(learningLearnables.languageId, languageCode) : undefined,
+                ),
+            );
 
         return result?.count ?? 0;
     }
@@ -203,7 +220,7 @@ export class SrsFacade implements SrsCardRepository, SrsReviewRepository {
         return rows.map((r) => r.grade as SrsGrade);
     }
 
-    public async getWeakLearnableIds(userId: string, limit: number) {
+    public async getWeakLearnableIds(userId: string, limit: number, languageCode?: string) {
         const result = await this.database
             .select({
                 learnableId: learningSrsCards.learnableId,
@@ -217,7 +234,14 @@ export class SrsFacade implements SrsCardRepository, SrsReviewRepository {
             })
             .from(learningSrsReviews)
             .innerJoin(learningSrsCards, eq(learningSrsReviews.cardId, learningSrsCards.id))
-            .where(and(eq(learningSrsReviews.userId, userId), eq(learningSrsReviews.isPractice, false)))
+            .innerJoin(learningLearnables, eq(learningSrsCards.learnableId, learningLearnables.id))
+            .where(
+                and(
+                    eq(learningSrsReviews.userId, userId),
+                    eq(learningSrsReviews.isPractice, false),
+                    languageCode ? eq(learningLearnables.languageId, languageCode) : undefined,
+                ),
+            )
             .groupBy(learningSrsCards.learnableId)
             .having(
                 sql`avg(case
