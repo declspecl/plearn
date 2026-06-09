@@ -26,6 +26,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://plearn.io"),
     title: "Plearn",
     description: "Private personal learning tools.",
     appleWebApp: {

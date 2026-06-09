@@ -1,0 +1,1 @@
+Plearn personal language learning hub unified structural graph, illustrating the translation flow from English Inner Monologue into structured Vietnamese and Japanese components (vocabulary, grammar, particles, and kanji).
