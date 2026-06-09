@@ -4,11 +4,12 @@ import { AnnotatedSentence, type WordInfo } from "./annotated-sentence";
 import { api } from "@plearn/trpc/client/react";
 import { useMemo } from "react";
 
-interface AnnotatedLearningTextProps {
+interface AnnotatedVietnameseTextProps {
     readonly text: string;
     readonly languageCode?: string;
     readonly className?: string;
     readonly showToneGraph?: boolean;
+    readonly showJapaneseFlow?: boolean;
 }
 
 /**
@@ -31,7 +32,13 @@ function findMatchingText(sentenceLower: string, canonicalText: string, aliases:
     return canonicalText;
 }
 
-export function AnnotatedLearningText({ text, languageCode = "vi", className, showToneGraph }: AnnotatedLearningTextProps) {
+export function AnnotatedVietnameseText({
+    text,
+    languageCode = "vi",
+    className,
+    showToneGraph,
+    showJapaneseFlow,
+}: AnnotatedVietnameseTextProps) {
     const { data: learnables } = api.learning.annotateText.useQuery({ languageCode, text }, { staleTime: 300_000 });
 
     const wordInfos = useMemo<readonly WordInfo[]>(() => {
@@ -61,8 +68,9 @@ export function AnnotatedLearningText({ text, languageCode = "vi", className, sh
             className={className}
             languageCode={languageCode}
             showToneGraph={showToneGraph}
+            showJapaneseFlow={showJapaneseFlow}
         />
     );
 }
 
-export const AnnotatedVietnameseText = AnnotatedLearningText;
+export const AnnotatedLearningText = AnnotatedVietnameseText;

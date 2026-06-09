@@ -1,6 +1,7 @@
 import type { LearningLanguageCode } from "./language-config";
 import type { LearnableType } from "./model";
 import kuromoji from "kuromoji";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { toHiragana, toRomaji } from "wanakana";
@@ -83,11 +84,39 @@ interface KuromojiTokenizer {
 
 let tokenizerPromise: Promise<KuromojiTokenizer | null> | undefined;
 
-function kuromojiDictionaryPath() {
-    const require = createRequire(import.meta.url);
-    const packageManifest = require.resolve("kuromoji/package.json");
+function isUsableDictionary(dictPath: string): boolean {
+    return existsSync(path.join(dictPath, "base.dat.gz"));
+}
 
-    return path.join(path.dirname(packageManifest), "dict");
+/**
+ * Resolves the kuromoji dictionary directory. `require.resolve` works under plain Node (tests,
+ * scripts), but bundlers like Turbopack rewrite it to a virtual `[externals]/...` path, so we
+ * fall back to walking up the filesystem from cwd to find the (possibly hoisted) install.
+ */
+function kuromojiDictionaryPath(): string {
+    try {
+        const require = createRequire(import.meta.url);
+        const dict = path.join(path.dirname(require.resolve("kuromoji/package.json")), "dict");
+        if (isUsableDictionary(dict)) {
+            return dict;
+        }
+    } catch {
+        // require.resolve unavailable under this runtime; fall through to filesystem search.
+    }
+
+    let dir = process.cwd();
+    let parent = path.dirname(dir);
+    while (parent !== dir) {
+        const candidate = path.join(dir, "node_modules", "kuromoji", "dict");
+        if (isUsableDictionary(candidate)) {
+            return candidate;
+        }
+
+        dir = parent;
+        parent = path.dirname(dir);
+    }
+
+    return path.join(process.cwd(), "node_modules", "kuromoji", "dict");
 }
 
 async function getKuromojiTokenizer(): Promise<KuromojiTokenizer | null> {

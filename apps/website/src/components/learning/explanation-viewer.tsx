@@ -1,6 +1,6 @@
 "use client";
 
-import { AnnotatedSentence, ToneLegend, type WordInfo } from "./annotated-sentence";
+import { AnnotatedSentence, PosLegend, ToneLegend, type WordInfo } from "./annotated-sentence";
 import { getLocalStorageItem, setLocalStorageItem } from "@/lib/local-storage";
 import { api } from "@plearn/trpc/client/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -494,14 +494,15 @@ export function LanguageExplanationViewer({
                     <section className="rounded-xl border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)] px-6 py-6">
                         <div className="mb-4 flex flex-wrap gap-4 text-sm text-[color:var(--plearn-ink-4)]">
                             <span>Explained</span>
-                            <span className="text-[color:var(--plearn-green)]">Vietnamese · comprehension</span>
+                            <span className="text-[color:var(--plearn-green)]">{languageName} · comprehension</span>
                         </div>
                         <div className="space-y-3">
                             <AnnotatedSentence
                                 sentence={explanationData.sentence.text}
                                 items={wordInfoItems}
                                 languageCode={languageCode}
-                                showToneGraph={true}
+                                showToneGraph={languageCode === "vi"}
+                                showJapaneseFlow={languageCode === "ja"}
                                 className="text-[1.95rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em]"
                             />
                             <p className="text-foreground text-sm">{explanationData.sentence.naturalGloss}</p>
@@ -513,6 +514,10 @@ export function LanguageExplanationViewer({
                             {languageCode === "vi" ? (
                                 <div className="border-t border-[color:var(--border)] pt-4">
                                     <ToneLegend />
+                                </div>
+                            ) : languageCode === "ja" ? (
+                                <div className="border-t border-[color:var(--border)] pt-4">
+                                    <PosLegend />
                                 </div>
                             ) : null}
                         </div>

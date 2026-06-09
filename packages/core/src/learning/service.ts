@@ -27,7 +27,7 @@ import type {
     SemanticSearchInput,
     UpdateWorkspaceReviewInput,
 } from "./repository";
-import { getLanguageTextProcessor, normalizeLearnableText } from "./text-processor";
+import { getLanguageTextProcessor, normalizeLearnableText, type DisplayToken } from "./text-processor";
 import { performance } from "node:perf_hooks";
 
 function logPerf(message: string, metadata: Readonly<Record<string, unknown>>) {
@@ -882,6 +882,10 @@ export class LearnableCatalogService {
         const unique = await getLanguageTextProcessor(languageCode).candidateLookupTexts(text);
 
         return this.learnables.findAllByNormalizedTextsOrAliases({ languageId: language.id, normalizedTexts: unique });
+    }
+
+    public async tokenizeText(languageCode: string, text: string): Promise<readonly DisplayToken[]> {
+        return getLanguageTextProcessor(languageCode).tokenizeForDisplay(text);
     }
 
     public async getLearnableGraph(

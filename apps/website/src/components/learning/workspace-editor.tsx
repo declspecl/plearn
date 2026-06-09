@@ -1,6 +1,6 @@
 "use client";
 
-import { AnnotatedSentence, ToneLegend, type WordInfo } from "./annotated-sentence";
+import { AnnotatedSentence, PosLegend, ToneLegend, type WordInfo } from "./annotated-sentence";
 import { getLocalStorageItem, removeLocalStorageItem, setLocalStorageItem } from "@/lib/local-storage";
 import { api } from "@plearn/trpc/client/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -397,6 +397,10 @@ function AnalysisProgress({ isActive }: { isActive: boolean }) {
     );
 }
 
+function readString(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 export function WorkspaceEditor({
     initialWorkspace,
     languageCode = "vi",
@@ -644,9 +648,9 @@ export function WorkspaceEditor({
             type: item.proposedType,
             notes: item.proposedNotes,
             formula: typeof item.proposedJson.formula === "string" ? item.proposedJson.formula : undefined,
-            reading: typeof item.proposedJson.reading === "string" ? item.proposedJson.reading : undefined,
-            baseForm: typeof item.proposedJson.baseForm === "string" ? item.proposedJson.baseForm : undefined,
-            romanization: typeof item.proposedJson.romanization === "string" ? item.proposedJson.romanization : undefined,
+            reading: readString(item.proposedJson.reading),
+            baseForm: readString(item.proposedJson.baseForm),
+            romanization: readString(item.proposedJson.romanization),
             exampleHints: Array.isArray(item.proposedJson.exampleHints)
                 ? (item.proposedJson.exampleHints as Array<{ exampleText: string; translation: string }>)
                 : [],
@@ -657,7 +661,7 @@ export function WorkspaceEditor({
         <div className="space-y-8">
             <div className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)]">
                 <div className="flex items-baseline justify-between px-4 pt-4 pb-2 text-sm text-[color:var(--plearn-ink-3)]">
-                    <span>English sentence</span>
+                    <span>English sentence for {languageName}</span>
                     <span className="text-[color:var(--plearn-ink-4)]">Cmd + Enter to analyze</span>
                 </div>
                 <div className="px-4 pb-4">
@@ -665,7 +669,11 @@ export function WorkspaceEditor({
                         className="text-foreground field-sizing-content min-h-36 w-full resize-y rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 text-base transition-colors outline-none focus:border-white/18"
                         data-slot="textarea"
                         maxLength={500}
-                        placeholder={`I want to say this naturally in ${languageName}...`}
+                        placeholder={
+                            languageCode === "ja"
+                                ? "I ate ramen with a friend in front of the station yesterday."
+                                : "What if I had never heard that? Wouldn't that be crazy?"
+                        }
                         value={sourceText}
                         onChange={(event) => setSourceText(event.target.value)}
                         onKeyDown={(event) => {
@@ -806,13 +814,18 @@ export function WorkspaceEditor({
                                     sentence={sentenceData.text}
                                     items={wordInfoItems}
                                     languageCode={languageCode}
-                                    showToneGraph={true}
+                                    showToneGraph={languageCode === "vi"}
+                                    showJapaneseFlow={languageCode === "ja"}
                                     className="text-[1.95rem] leading-[1.35] font-[var(--font-display)] tracking-[-0.02em]"
                                 />
                                 <p className="text-sm text-[color:var(--plearn-ink-3)]">{sentenceData.meaning}</p>
                                 {languageCode === "vi" ? (
                                     <div className="border-t border-[color:var(--border)] pt-4">
                                         <ToneLegend />
+                                    </div>
+                                ) : languageCode === "ja" ? (
+                                    <div className="border-t border-[color:var(--border)] pt-4">
+                                        <PosLegend />
                                     </div>
                                 ) : null}
                             </div>

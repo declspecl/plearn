@@ -37,6 +37,17 @@
     --color-tone-4: #f97316;
     --color-tone-5: #a855f7;
     --color-tone-6: #ef4444;
+    --color-pos-noun: #60a5fa;
+    --color-pos-verb: #f87171;
+    --color-pos-adjective: #fbbf24;
+    --color-pos-adverb: #34d399;
+    --color-pos-particle: #c084fc;
+    --color-pos-auxiliary: #f472b6;
+    --color-pos-conjunction: #38bdf8;
+    --color-pos-interjection: #fb923c;
+    --color-pos-adnominal: #2dd4bf;
+    --color-pos-prefix: #a78bfa;
+    --color-pos-other: #9ca3af;
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);

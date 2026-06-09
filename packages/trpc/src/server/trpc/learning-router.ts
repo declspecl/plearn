@@ -198,6 +198,16 @@ export const learningRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             return ctx.services.learnableCatalogService.annotateText(input.languageCode, input.text);
         }),
+    tokenizeText: protectedProcedure
+        .input(
+            z.object({
+                languageCode: z.string().min(2),
+                text: z.string().min(1),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            return ctx.services.learnableCatalogService.tokenizeText(input.languageCode, input.text);
+        }),
     getLearnableGraph: protectedProcedure
         .input(
             z.object({
