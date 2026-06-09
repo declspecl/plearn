@@ -4,6 +4,7 @@ import { AppSidebarContent } from "./app-sidebar-content";
 import { SiteLogo } from "@/components/brand/site-logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetPopup, SheetTrigger } from "@/components/ui/sheet";
+import { DEFAULT_LANGUAGE, languageFromPathname } from "@/lib/languages";
 import { ChartLineUp, House, List, ListMagnifyingGlass, Stack } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,13 +19,9 @@ interface MobileNavProps {
 
 export function MobileNav({ user }: MobileNavProps) {
     const pathname = usePathname();
-    const activeLanguageSlug = pathname.startsWith("/tools/japanese")
-        ? "japanese"
-        : pathname.startsWith("/tools/vietnamese")
-          ? "vietnamese"
-          : null;
-    const showTabs = Boolean(activeLanguageSlug);
-    const baseHref = `/tools/${activeLanguageSlug ?? "vietnamese"}`;
+    const routeLanguage = languageFromPathname(pathname);
+    const showTabs = Boolean(routeLanguage);
+    const baseHref = `/tools/${routeLanguage?.slug ?? DEFAULT_LANGUAGE.slug}`;
     const tabs = [
         { href: baseHref, label: "Hub", icon: House, active: pathname === baseHref },
         { href: `${baseHref}/analyze`, label: "Analyze", icon: ListMagnifyingGlass, active: pathname.startsWith(`${baseHref}/analyze`) },

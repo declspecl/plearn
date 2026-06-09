@@ -2,7 +2,14 @@ import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import React from "react";
 
-export function ArtisanWorkbenchBanner() {
+interface AnalysisBannerProps {
+    /** Destination for the "Start analysis" CTA, e.g. `/tools/japanese/analyze`. */
+    readonly href: string;
+    /** One-line description of what analysis does for this language. */
+    readonly blurb: string;
+}
+
+export function AnalysisBanner({ href, blurb }: AnalysisBannerProps) {
     return (
         <div className="group border-border bg-card hover:border-primary/30 relative flex min-h-[280px] w-full flex-col justify-end overflow-hidden rounded-[2.5rem] border shadow-sm transition-all duration-500 hover:shadow-md">
             {/* Ambient Background Glows */}
@@ -80,13 +87,11 @@ export function ArtisanWorkbenchBanner() {
                     <h2 className="text-foreground text-4xl leading-none font-[var(--font-display)] tracking-[-0.03em] md:text-5xl">
                         Sentence analysis
                     </h2>
-                    <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">
-                        Capture a thought, translate it into Vietnamese, and decide what deserves a place in your long-term catalog.
-                    </p>
+                    <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">{blurb}</p>
                 </div>
 
                 <Link
-                    href="/tools/vietnamese/analyze"
+                    href={href}
                     className="group/btn bg-foreground text-background flex h-14 shrink-0 items-center justify-between gap-6 rounded-2xl px-6 shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                     <span className="font-medium">Start analysis</span>

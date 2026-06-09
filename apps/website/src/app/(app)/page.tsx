@@ -1,3 +1,4 @@
+import { ArtisanJapaneseLandmark } from "./_components/artisan-japanese-landmark";
 import { ArtisanVietnameseLandmark } from "./_components/artisan-vietnamese-landmark";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
@@ -36,14 +37,9 @@ export default function HomePage() {
                 </Link>
                 <Link
                     href="/tools/japanese"
-                    className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col justify-between gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md"
+                    className="group border-border bg-card hover:border-primary/30 hover:shadow-primary/5 relative flex flex-col gap-6 rounded-[2rem] border p-6 shadow-sm transition-all duration-500 hover:shadow-md xl:col-span-2"
                 >
-                    <div className="grid min-h-44 place-items-center rounded-[1.4rem] border border-[color:var(--border)] bg-[color:var(--plearn-bg-2)]">
-                        <div className="text-center">
-                            <p className="text-[4rem] leading-none font-[var(--font-display)] tracking-[-0.06em]">日本語</p>
-                            <p className="mt-2 text-sm text-[color:var(--plearn-ink-4)]">words · readings · particles</p>
-                        </div>
-                    </div>
+                    <ArtisanJapaneseLandmark />
 
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
