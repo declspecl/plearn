@@ -2,6 +2,7 @@ import { users } from "./auth";
 import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, vector } from "drizzle-orm/pg-core";
 
 export const agentThreadStatusEnum = pgEnum("agent_thread_status", ["active", "archived"]);
+export const agentThreadKindEnum = pgEnum("agent_thread_kind", ["learning_chat", "transit"]);
 export const agentGenerationStatusEnum = pgEnum("agent_generation_status", ["pending", "ready", "failed"]);
 export const agentMessageRoleEnum = pgEnum("agent_message_role", ["system", "user", "assistant", "tool"]);
 export const agentMessageStatusEnum = pgEnum("agent_message_status", ["streaming", "completed", "failed", "cancelled"]);
@@ -15,6 +16,7 @@ export const agentThreads = pgTable(
         createdByUserId: text("created_by_user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
+        kind: agentThreadKindEnum("kind").notNull().default("learning_chat"),
         languageCode: text("language_code").notNull().default("vi"),
         status: agentThreadStatusEnum("status").notNull().default("active"),
         title: text("title").notNull().default("New chat"),
@@ -32,6 +34,7 @@ export const agentThreads = pgTable(
     },
     (table) => [
         index("agent_threads_user_last_message_idx").on(table.createdByUserId, table.lastMessageAt),
+        index("agent_threads_user_kind_last_message_idx").on(table.createdByUserId, table.kind, table.lastMessageAt),
         index("agent_threads_status_idx").on(table.status),
         index("agent_threads_language_code_idx").on(table.languageCode),
     ],

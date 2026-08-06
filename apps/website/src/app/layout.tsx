@@ -1,6 +1,6 @@
 import { Providers } from "./_components/providers";
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist_Mono, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
 const plexSans = IBM_Plex_Sans({
@@ -31,7 +31,13 @@ export const metadata: Metadata = {
     description: "Private personal learning tools.",
     appleWebApp: {
         title: "Plearn",
+        capable: true,
+        statusBarStyle: "black-translucent",
     },
+};
+
+export const viewport: Viewport = {
+    themeColor: "#0a0a0a",
 };
 
 export interface RootLayoutProps {

@@ -23,6 +23,7 @@ import {
     House,
     ListMagnifyingGlass,
     Stack,
+    Train,
 } from "@phosphor-icons/react";
 import { api } from "@plearn/trpc/client/react";
 import Link from "next/link";
@@ -38,6 +39,7 @@ const TOOL_ICONS: Record<ToolKey, React.ComponentType<{ className?: string; weig
     practice: Barbell,
     analyze: ListMagnifyingGlass,
     explain: BookOpenText,
+    transit: Train,
     chat: ChatsCircle,
     catalog: Stack,
     history: ListMagnifyingGlass,

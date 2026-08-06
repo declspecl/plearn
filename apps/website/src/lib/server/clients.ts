@@ -2,6 +2,7 @@ import { getAppConfig } from "./app-config";
 import { ChatService } from "./chat/service";
 import { VercelAiLearningAnalyzer, VercelAiLearningEmbedder } from "./learning-ai";
 import { VercelAiCardGenerator, VercelAiAnswerGrader } from "./srs-ai";
+import { TransitService } from "./transit/service";
 import { createAuth } from "@plearn/auth/server";
 import {
     LearnableCatalogService,
@@ -62,6 +63,7 @@ export function getRepositories() {
 
 let cachedServices: Services | undefined;
 let cachedChatService: ChatService | undefined;
+let cachedTransitService: TransitService | undefined;
 let cachedLearningEmbedder: VercelAiLearningEmbedder | undefined;
 
 function getLearningEmbedder() {
@@ -108,4 +110,14 @@ export function getLearningChatService(): ChatService {
     cachedChatService = new ChatService(getDatabaseClient(), getServices(), getLearningEmbedder());
 
     return cachedChatService;
+}
+
+export function getTransitService(): TransitService {
+    if (cachedTransitService) {
+        return cachedTransitService;
+    }
+
+    cachedTransitService = new TransitService(getDatabaseClient());
+
+    return cachedTransitService;
 }

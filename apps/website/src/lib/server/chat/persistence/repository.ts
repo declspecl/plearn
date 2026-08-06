@@ -130,6 +130,7 @@ export class ChatRepository {
             .values({
                 id: randomUUID(),
                 createdByUserId: input.createdByUserId,
+                kind: "learning_chat",
                 languageCode: input.languageCode,
                 title: "New chat",
             })
@@ -146,7 +147,14 @@ export class ChatRepository {
         const threads = await this.db
             .select()
             .from(agentThreads)
-            .where(and(eq(agentThreads.createdByUserId, userId), eq(agentThreads.status, "active"), isNull(agentThreads.archivedAt)))
+            .where(
+                and(
+                    eq(agentThreads.createdByUserId, userId),
+                    eq(agentThreads.kind, "learning_chat"),
+                    eq(agentThreads.status, "active"),
+                    isNull(agentThreads.archivedAt),
+                ),
+            )
             .orderBy(desc(agentThreads.lastMessageAt))
             .limit(100);
 
@@ -186,7 +194,7 @@ export class ChatRepository {
         const [row] = await this.db
             .select()
             .from(agentThreads)
-            .where(and(eq(agentThreads.id, threadId), eq(agentThreads.createdByUserId, userId)))
+            .where(and(eq(agentThreads.id, threadId), eq(agentThreads.createdByUserId, userId), eq(agentThreads.kind, "learning_chat")))
             .limit(1);
 
         return row;

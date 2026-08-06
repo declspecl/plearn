@@ -19,6 +19,7 @@ export const TOOLS = {
     practice: { label: "Practice", segment: "practice" },
     analyze: { label: "Analyze", segment: "analyze" },
     explain: { label: "Explain", segment: "explain" },
+    transit: { label: "Transit", segment: "transit" },
     chat: { label: "Chat", segment: "chat" },
     catalog: { label: "Catalog", segment: "catalog" },
     history: { label: "History", segment: "sentences" },
@@ -63,7 +64,7 @@ export const LANGUAGES = [
         slug: "japanese",
         label: "Japanese",
         flag: "🇯🇵",
-        tools: ["hub", "review", "practice", "analyze", "explain", "chat", "catalog", "history"],
+        tools: ["hub", "transit", "review", "practice", "analyze", "explain", "chat", "catalog", "history"],
         hub: {
             emptyHero: "Your latest Japanese sentence will live here once you decompose it.",
             analyzeBlurb: "Capture a thought, translate it into Japanese, and decide what deserves a place in your long-term catalog.",

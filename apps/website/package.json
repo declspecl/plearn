@@ -26,10 +26,12 @@
         "@tanstack/react-form": "catalog:",
         "ai": "catalog:",
         "class-variance-authority": "catalog:",
+        "cheerio": "catalog:",
         "clsx": "catalog:",
         "cmdk": "catalog:",
         "d3-force": "catalog:",
         "date-fns": "catalog:",
+        "file-type": "catalog:",
         "input-otp": "catalog:",
         "motion": "catalog:",
         "next": "catalog:",
@@ -63,6 +65,7 @@
         "babel-plugin-react-compiler": "catalog:",
         "client-only": "catalog:",
         "server-only": "catalog:",
+        "sharp": "catalog:",
         "tailwindcss": "catalog:",
         "typescript": "catalog:"
     }

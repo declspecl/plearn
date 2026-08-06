@@ -5,7 +5,7 @@ import { SiteLogo } from "@/components/brand/site-logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetPopup, SheetTrigger } from "@/components/ui/sheet";
 import { DEFAULT_LANGUAGE, languageFromPathname } from "@/lib/languages";
-import { ChartLineUp, House, List, ListMagnifyingGlass, Stack } from "@phosphor-icons/react";
+import { ChartLineUp, House, List, ListMagnifyingGlass, Stack, Train } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "~/lib/utils";
@@ -22,18 +22,42 @@ export function MobileNav({ user }: MobileNavProps) {
     const routeLanguage = languageFromPathname(pathname);
     const showTabs = Boolean(routeLanguage);
     const baseHref = `/tools/${routeLanguage?.slug ?? DEFAULT_LANGUAGE.slug}`;
-    const tabs = [
-        { href: baseHref, label: "Hub", icon: House, active: pathname === baseHref },
-        { href: `${baseHref}/analyze`, label: "Analyze", icon: ListMagnifyingGlass, active: pathname.startsWith(`${baseHref}/analyze`) },
-        { href: `${baseHref}/catalog`, label: "Catalog", icon: Stack, active: pathname.startsWith(`${baseHref}/catalog`) },
-        {
-            href: `${baseHref}/sentences`,
-            label: "History",
-            icon: ListMagnifyingGlass,
-            active: pathname.startsWith(`${baseHref}/sentences`),
-        },
-        { href: `${baseHref}/review`, label: "Review", icon: ChartLineUp, active: pathname.startsWith(`${baseHref}/review`) },
-    ];
+    const tabs =
+        routeLanguage?.code === "ja"
+            ? [
+                  { href: baseHref, label: "Hub", icon: House, active: pathname === baseHref },
+                  { href: `${baseHref}/transit`, label: "Transit", icon: Train, active: pathname.startsWith(`${baseHref}/transit`) },
+                  {
+                      href: `${baseHref}/analyze`,
+                      label: "Analyze",
+                      icon: ListMagnifyingGlass,
+                      active: pathname.startsWith(`${baseHref}/analyze`),
+                  },
+                  {
+                      href: `${baseHref}/sentences`,
+                      label: "History",
+                      icon: ListMagnifyingGlass,
+                      active: pathname.startsWith(`${baseHref}/sentences`),
+                  },
+                  { href: `${baseHref}/review`, label: "Review", icon: ChartLineUp, active: pathname.startsWith(`${baseHref}/review`) },
+              ]
+            : [
+                  { href: baseHref, label: "Hub", icon: House, active: pathname === baseHref },
+                  {
+                      href: `${baseHref}/analyze`,
+                      label: "Analyze",
+                      icon: ListMagnifyingGlass,
+                      active: pathname.startsWith(`${baseHref}/analyze`),
+                  },
+                  { href: `${baseHref}/catalog`, label: "Catalog", icon: Stack, active: pathname.startsWith(`${baseHref}/catalog`) },
+                  {
+                      href: `${baseHref}/sentences`,
+                      label: "History",
+                      icon: ListMagnifyingGlass,
+                      active: pathname.startsWith(`${baseHref}/sentences`),
+                  },
+                  { href: `${baseHref}/review`, label: "Review", icon: ChartLineUp, active: pathname.startsWith(`${baseHref}/review`) },
+              ];
 
     return (
         <>

@@ -21,7 +21,8 @@
         "@plearn/eslint": "workspace:*",
         "@plearn/prettier": "workspace:*",
         "@plearn/typescript": "workspace:*",
-        "@types/kuromoji": "catalog:"
+        "@types/kuromoji": "catalog:",
+        "@types/node": "catalog:"
     },
     "exports": {
         ".": {

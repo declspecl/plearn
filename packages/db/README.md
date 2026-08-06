@@ -27,6 +27,11 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/plearn_dev
 The bundled Docker images use `pgvector`-enabled Postgres so lexical and vector
 search work locally and in tests.
 
+`db:migrate:dev` installs the required `vector` and `pg_trgm` extensions through
+the initial migration. `db:push:dev` bootstraps those extensions automatically
+before Drizzle introspects the schema, so it also works with a fresh or existing
+development volume.
+
 ## Usage
 
 ```typescript
