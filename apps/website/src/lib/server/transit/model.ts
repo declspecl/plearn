@@ -4,6 +4,7 @@ import { normalizeTransitBrief, sourcesForTransitExtraction } from "./evidence";
 import { fetchOfficialResource, type OfficialResource } from "./official-resource-fetcher";
 import { sanitizeTransitExtraction } from "./sanitize";
 import type { NormalizedTransitImage } from "./uploads";
+import { describeDepartureWindow, type ResolvedDepartureWindow } from "@/lib/transit/departure";
 import { transitExtractionSchema, transitResearchSchema, wayfindingRefinementSchema } from "@/lib/transit/schemas";
 import type { SanitizedTransitExtraction, TransitBrief, TransitSource } from "@/lib/transit/types";
 import { openai } from "@ai-sdk/openai";
@@ -21,9 +22,16 @@ Reliability rules:
 - When official sources conflict, preserve the conflict in an alert with both values and timestamps, and prefer the newest operator report for the primary value.
 - Do not invent indoor directions. Preserve exact Japanese sign, gate, exit, and platform labels alongside English instructions.
 - When evidence is absent, use unavailable. When reasoning beyond evidence is unavoidable, use inferred with low confidence.
+- A leg is one boarding. Never split a single through service into several legs at the stations it merely stops at; start a new leg only where the traveler physically changes trains.
+- trainNumber is the number alone: from "Kodama No. 767" or "こだま767号" record "767" with trainName "Kodama". Never store a fragment such as "no" or a duplicate of the train name.
 - Every sourced value must cite IDs present in the sources array.
 - Output Asia/Tokyo times in 24-hour format.
-- Always tell the traveler to check the station departure board.`;
+- Always tell the traveler to check the station departure board.
+
+Language rules:
+- The traveler reads English and does not read Japanese. Write every prose field in English: summary, alert titles and messages, verification steps, unresolved questions, transfer warnings, wayfinding labels and notes, clarification questions, and source titles.
+- Reading a Japanese source never changes your output language. Translate what you read; do not mirror it.
+- Japanese belongs only where the traveler must match characters against a sign, a board, or an app: signTextJa entries, StationRef.nameJa, and official service or line designations such as 普通 嵯峨嵐山行. Give those with the English equivalent whenever one exists.`;
 
 function providerOptions() {
     const config = getAppConfig();
@@ -46,6 +54,7 @@ export async function extractTransitFromImages(input: {
     images: readonly NormalizedTransitImage[];
     entryPoint: string | null;
     travelDate: string | null;
+    departureWindow: ResolvedDepartureWindow | null;
     mobilityNeeds: string | null;
     message: string | null;
     signal?: AbortSignal;
@@ -56,10 +65,11 @@ export async function extractTransitFromImages(input: {
             text: `Current time: ${new Date().toISOString()} (interpret travel in Asia/Tokyo).
 User entry point: ${input.entryPoint ?? "not supplied"}
 Travel-date override: ${input.travelDate ?? "not supplied"}
+Requested departure window: ${input.departureWindow ? describeDepartureWindow(input.departureWindow) : "not supplied — assume the booked service"}
 Mobility/luggage needs: ${input.mobilityNeeds ?? "none supplied"}
 Question: ${input.message ?? "Build a verified boarding guide."}
 
-Extract only travel fields allowed by the schema. Classify each image. If station, date, train number, or direction is materially ambiguous, add a clarification instead of guessing. A missing entry point only needs clarification when the user asked for station access directions.`,
+Extract only travel fields allowed by the schema. Classify each image. If station, date, train number, or direction is materially ambiguous, add a clarification instead of guessing. When a departure window is supplied, treat its date as authoritative and never raise a service-date clarification. A missing entry point only needs clarification when the user asked for station access directions.`,
         },
         ...input.images.map((image): ImagePart => ({
             type: "image",
@@ -193,9 +203,13 @@ function researchPrompt(input: {
     extraction: SanitizedTransitExtraction;
     message: string | null;
     previousBrief: TransitBrief | null;
+    departureWindow: ResolvedDepartureWindow | null;
     screenshotSources: readonly TransitSource[];
 }) {
     return `Current time: ${new Date().toISOString()}. The traveler is in Japan (Asia/Tokyo).
+
+Requested departure window:
+${input.departureWindow ? describeDepartureWindow(input.departureWindow) : "Not supplied. Verify the service in the screenshot."}
 
 Sanitized screenshot extraction:
 ${JSON.stringify(input.extraction)}
@@ -209,7 +223,7 @@ ${JSON.stringify(input.previousBrief)}
 Traveler follow-up or request:
 ${input.message ?? "Verify this journey and build detailed boarding directions."}
 
-Search official sources in Japanese or English. Use current operator information, official timetables, and official station premises maps. Do not use search-result snippets alone for a critical claim: open the relevant official page. Build a complete TransitBrief. Include official source records with stable IDs and cite those IDs from every fact. Use operator_live only when the page itself provides an explicit update timestamp within 15 minutes. For a reservation screenshot, cite the supplied user-screenshot source. Request no more than two official station map/PDF/HTML resources, and only when reading the resource visually or directly would materially improve wayfinding. Do not request ordinary timetable pages that web search already opened.`;
+When a departure window is supplied, legs[0] must be the next service the traveler can actually board inside that window, and the summary must name up to two later alternatives with their departure times. Search official sources in Japanese or English, and write the resulting brief in English regardless of which language you read. Use current operator information, official timetables, and official station premises maps. Do not use search-result snippets alone for a critical claim: open the relevant official page. Build a complete TransitBrief. Include official source records with stable IDs and cite those IDs from every fact. Use operator_live only when the page itself provides an explicit update timestamp within 15 minutes. For a reservation screenshot, cite the supplied user-screenshot source. Request no more than two official station map/PDF/HTML resources, and only when reading the resource visually or directly would materially improve wayfinding. Do not request ordinary timetable pages that web search already opened.`;
 }
 
 async function fetchRequestedResources(requests: readonly { url: string; purpose: string }[]) {
@@ -278,6 +292,7 @@ export async function researchTransit(input: {
     mobilityNeeds: string | null;
     city: string | null;
     message: string | null;
+    departureWindow: ResolvedDepartureWindow | null;
     previousBrief: TransitBrief | null;
     signal?: AbortSignal;
     onStage?: (stage: "reading_maps" | "building_directions") => void;
@@ -291,6 +306,7 @@ export async function researchTransit(input: {
             extraction: input.extraction,
             message: input.message,
             previousBrief: input.previousBrief,
+            departureWindow: input.departureWindow,
             screenshotSources: suppliedScreenshotSources,
         }),
         tools: {

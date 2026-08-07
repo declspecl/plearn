@@ -1,7 +1,7 @@
 import type { SanitizedTransitExtraction, TransitBrief, TransitThreadDetail, TransitThreadSummary } from "@/lib/transit/types";
 import type { DatabaseInstance } from "@plearn/db/client";
 import { agentMessages, agentThreadRuns, agentThreads } from "@plearn/db/schema";
-import { and, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import "server-only";
 
@@ -285,16 +285,6 @@ export class TransitRepository {
             .limit(1);
 
         return run?.run ?? null;
-    }
-
-    public async countRecentRuns(userId: string, since: Date) {
-        const runs = await this.db
-            .select({ id: agentThreadRuns.id })
-            .from(agentThreadRuns)
-            .innerJoin(agentThreads, eq(agentThreadRuns.threadId, agentThreads.id))
-            .where(and(eq(agentThreads.createdByUserId, userId), eq(agentThreads.kind, "transit"), gte(agentThreadRuns.createdAt, since)));
-
-        return runs.length;
     }
 
     public async findRunByClientTurnId(threadId: string, clientTurnId: string) {

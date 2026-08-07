@@ -170,7 +170,6 @@ export type TransitFailureCode =
     | "invalid_upload"
     | "needs_image"
     | "needs_confirmation"
-    | "rate_limited"
     | "run_in_progress"
     | "model_error"
     | "network_error"

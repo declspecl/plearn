@@ -2,8 +2,10 @@ import { LANGUAGES, TOOLS } from "../../../../apps/website/src/lib/languages";
 import { OFFICIAL_RAIL_DOMAINS, isOfficialRailHostname } from "../../../../apps/website/src/lib/server/transit/constants";
 import { buildUnverifiedTransitBrief, normalizeTransitBrief } from "../../../../apps/website/src/lib/server/transit/evidence";
 import { redactSensitiveText, sanitizeTransitExtraction } from "../../../../apps/website/src/lib/server/transit/sanitize";
+import { transitBriefSchema, wayfindingStepSchema } from "../../../../apps/website/src/lib/transit/schemas";
 import type { EvidenceBasis, SourcedValue, StationRef, TransitBrief, TransitSource } from "../../../../apps/website/src/lib/transit/types";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 function sourced<T>(value: T | null, basis: EvidenceBasis, sourceIds: readonly string[] = []): SourcedValue<T> {
     return { value, basis, confidence: "high", sourceIds, sourceAsOf: null, note: null };
@@ -212,5 +214,76 @@ describe("Japanese Transit evidence policy", () => {
         expect(fallback.legs[0]?.estimatedDeparture.basis).toBe("unavailable");
         expect(fallback.legs[0]?.departurePlatform.value).toBeNull();
         expect(fallback.verificationSteps.join(" ")).toMatch(/official operator information could not be checked/iu);
+    });
+    it("canonicalises model times to an Asia/Tokyo clock before the brief is stored", () => {
+        const source: TransitSource = {
+            id: "official-1",
+            title: "JR timetable",
+            url: "https://www.jr-odekake.net/timetable",
+            publisher: "www.jr-odekake.net",
+            retrievedAt: "2026-08-06T00:00:00.000Z",
+            sourceAsOf: "2026-08-06T00:00:00.000Z",
+            basis: "operator_timetable",
+        };
+        const fixture = fixtureBrief(source);
+        const isoTimes: TransitBrief = {
+            ...fixture,
+            legs: [
+                {
+                    ...fixture.legs[0]!,
+                    // The schema accepts any string, and the model really does return these.
+                    scheduledDeparture: sourced("2026-08-06T09:27:00+09:00", "operator_timetable", [source.id]),
+                    scheduledArrival: sourced("2026-08-06T02:57:00Z", "operator_timetable", [source.id]),
+                },
+            ],
+        };
+
+        const normalized = normalizeTransitBrief(isoTimes, [source]);
+
+        expect(normalized.legs[0]?.scheduledDeparture.value).toBe("09:27");
+        expect(normalized.legs[0]?.scheduledArrival.value).toBe("11:57");
+    });
+
+    it("leaves an already-clean clock and a null time untouched", () => {
+        const source: TransitSource = {
+            id: "official-1",
+            title: "JR timetable",
+            url: "https://www.jr-odekake.net/timetable",
+            publisher: "www.jr-odekake.net",
+            retrievedAt: "2026-08-06T00:00:00.000Z",
+            sourceAsOf: "2026-08-06T00:00:00.000Z",
+            basis: "operator_timetable",
+        };
+        const normalized = normalizeTransitBrief(fixtureBrief(source), [source]);
+
+        expect(normalized.legs[0]?.scheduledDeparture.value).toBe("09:27");
+        expect(normalized.legs[0]?.estimatedDeparture.value).toBeNull();
+    });
+});
+
+describe("brief output contract", () => {
+    const briefJsonSchema = z.toJSONSchema(transitBriefSchema, { io: "output" }) as {
+        properties: Record<string, { description?: string; items?: { properties?: Record<string, { description?: string }> } }>;
+    };
+
+    it("tells the model, in the schema itself, to write prose in English", () => {
+        // The system prompt also says this, but the traveller-facing fields carry it per-field so a
+        // Japanese source page cannot quietly flip the answer's language.
+        for (const field of ["summary", "verificationSteps", "unresolvedQuestions"]) {
+            expect(briefJsonSchema.properties[field]?.description).toMatch(/written in english/iu);
+        }
+        const alert = briefJsonSchema.properties.alerts?.items?.properties;
+        expect(alert?.title?.description).toMatch(/written in english/iu);
+        expect(alert?.message?.description).toMatch(/written in english/iu);
+    });
+
+    it("keeps Japanese signage as the documented exception", () => {
+        const step = z.toJSONSchema(wayfindingStepSchema, { io: "output" }) as {
+            properties: Record<string, { description?: string }>;
+        };
+
+        expect(step.properties.signTextJa?.description).toMatch(/verbatim japanese/iu);
+        expect(step.properties.signTextJa?.description).not.toMatch(/written in english/iu);
+        expect(step.properties.instructionEn?.description).toMatch(/written in english/iu);
     });
 });

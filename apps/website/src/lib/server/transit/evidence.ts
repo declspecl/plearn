@@ -1,4 +1,5 @@
 import { isOfficialRailHostname } from "./constants";
+import { formatClock } from "@/lib/transit/clock";
 import { transitBriefSchema } from "@/lib/transit/schemas";
 import type { SanitizedTransitExtraction, SourcedValue, TransitBrief, TransitSource, WayfindingStep } from "@/lib/transit/types";
 import "server-only";
@@ -180,6 +181,15 @@ function buildTrustedSources(parsedSources: readonly TransitSource[], authoritat
     return { sourceById, aliasById };
 }
 
+/**
+ * The schema accepts any string for a time, and the model does sometimes return a full ISO
+ * timestamp. Canonicalising here keeps the stored brief, the follow-up context handed back to the
+ * model, and the rendered clock all in the same Asia/Tokyo HH:MM shape.
+ */
+function normalizeClockValue(value: SourcedValue<string>): SourcedValue<string> {
+    return value.value === null ? value : { ...value, value: formatClock(value.value) ?? value.value };
+}
+
 function normalizeSourcedValue<T>(
     value: SourcedValue<T>,
     sources: ReadonlyMap<string, TransitSource>,
@@ -274,12 +284,12 @@ export function normalizeTransitBrief(input: unknown, additionalSources: readonl
             trainNumber: normalize(leg.trainNumber),
             origin: normalize(leg.origin),
             destination: normalize(leg.destination),
-            scheduledDeparture: normalize(leg.scheduledDeparture),
-            estimatedDeparture: normalize(leg.estimatedDeparture),
-            actualDeparture: normalize(leg.actualDeparture),
-            scheduledArrival: normalize(leg.scheduledArrival),
-            estimatedArrival: normalize(leg.estimatedArrival),
-            actualArrival: normalize(leg.actualArrival),
+            scheduledDeparture: normalizeClockValue(normalize(leg.scheduledDeparture)),
+            estimatedDeparture: normalizeClockValue(normalize(leg.estimatedDeparture)),
+            actualDeparture: normalizeClockValue(normalize(leg.actualDeparture)),
+            scheduledArrival: normalizeClockValue(normalize(leg.scheduledArrival)),
+            estimatedArrival: normalizeClockValue(normalize(leg.estimatedArrival)),
+            actualArrival: normalizeClockValue(normalize(leg.actualArrival)),
             departurePlatform: normalize(leg.departurePlatform),
             arrivalPlatform: normalize(leg.arrivalPlatform),
             carNumber: normalize(leg.carNumber),

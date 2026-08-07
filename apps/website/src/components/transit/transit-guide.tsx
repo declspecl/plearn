@@ -1,10 +1,12 @@
 "use client";
 
 import { TransitBriefView } from "./transit-brief";
+import { TransitComposer, type TransitDraft, type TransitPreview } from "./transit-composer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverPopup, PopoverTrigger } from "@/components/ui/popover";
 import { isAcceptedTransitImage, transitImagesFromClipboard } from "@/lib/transit/clipboard";
+import { departureWindowFields, tokyoClock, tokyoDate } from "@/lib/transit/departure";
 import type {
     ClarificationField,
     SanitizedTransitExtraction,
@@ -14,22 +16,7 @@ import type {
     TransitThreadDetail,
     TransitThreadSummary,
 } from "@/lib/transit/types";
-import {
-    Camera,
-    CaretDown,
-    Check,
-    ClockCounterClockwise,
-    FileImage,
-    MapPin,
-    Plus,
-    ShieldCheck,
-    Sparkle,
-    Train,
-    Trash,
-    UploadSimple,
-    Warning,
-    X,
-} from "@phosphor-icons/react";
+import { CaretDown, Check, ClockCounterClockwise, Plus, ShieldCheck, Sparkle, Train, Trash, Warning, X } from "@phosphor-icons/react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 
@@ -49,10 +36,13 @@ const STAGE_LABELS: Record<TransitStage, string> = {
     building_directions: "Build directions",
 };
 
-interface PreviewFile {
-    readonly file: File;
-    readonly url: string;
-}
+const EMPTY_DRAFT: TransitDraft = {
+    entryPoint: "",
+    travelDate: null,
+    departure: { kind: "as_booked" },
+    mobilityNeeds: "",
+    message: "",
+};
 
 function makeClientTurnId() {
     return `transit-${Date.now()}-${crypto.randomUUID()}`;
@@ -64,21 +54,26 @@ async function responseError(response: Response) {
     return body?.message ?? `The Transit service returned HTTP ${response.status}.`;
 }
 
+/** "Kyoto → Saga-Arashiyama" for the collapsed header, so the line carries the trip instead of a label. */
+function briefRouteLabel(brief: TransitBrief | null) {
+    const legs = brief?.legs ?? [];
+    const origin = legs[0]?.origin.value?.nameEn.replace(/\s+Station$/u, "");
+    const destination = legs.at(-1)?.destination.value?.nameEn.replace(/\s+Station$/u, "");
+
+    return origin && destination ? `${origin} → ${destination}` : null;
+}
+
 function formatThreadDate(value: string) {
     return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "Asia/Tokyo" }).format(new Date(value));
 }
 
 export function TransitGuide() {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const previewsRef = useRef<readonly PreviewFile[]>([]);
+    const previewsRef = useRef<readonly TransitPreview[]>([]);
     const [threads, setThreads] = useState<readonly TransitThreadSummary[]>([]);
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
     const [showHistory, setShowHistory] = useState(false);
-    const [previews, setPreviews] = useState<readonly PreviewFile[]>([]);
-    const [entryPoint, setEntryPoint] = useState("");
-    const [travelDate, setTravelDate] = useState("");
-    const [mobilityNeeds, setMobilityNeeds] = useState("");
-    const [message, setMessage] = useState("");
+    const [previews, setPreviews] = useState<readonly TransitPreview[]>([]);
+    const [draft, setDraft] = useState<TransitDraft>(EMPTY_DRAFT);
     const [brief, setBrief] = useState<TransitBrief | null>(null);
     const [extraction, setExtraction] = useState<SanitizedTransitExtraction | null>(null);
     const [clarifications, setClarifications] = useState<readonly ClarificationField[]>([]);
@@ -90,9 +85,20 @@ export function TransitGuide() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRunning, setIsRunning] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
+    // Tokyo "now" drives the departure presets; refreshed so a page left open does not go stale.
+    const [tokyoNow, setTokyoNow] = useState(() => ({ date: tokyoDate(), clock: tokyoClock() }));
 
     previewsRef.current = previews;
+
+    useEffect(() => {
+        const timer = setInterval(() => setTokyoNow({ date: tokyoDate(), clock: tokyoClock() }), 30_000);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    function patchDraft(patch: Partial<TransitDraft>) {
+        setDraft((current) => ({ ...current, ...patch }));
+    }
 
     const disposePreviews = useEffectEvent(() => {
         for (const preview of previewsRef.current) {
@@ -100,17 +106,17 @@ export function TransitGuide() {
         }
         previewsRef.current = [];
         setPreviews([]);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
     });
 
     const applyThreadDetail = useEffectEvent((detail: TransitThreadDetail) => {
         setActiveThreadId(detail.thread.id);
         setExtraction(detail.extraction);
         setBrief(detail.brief);
-        setEntryPoint(detail.extraction?.entryPoint ?? "");
-        setMobilityNeeds(detail.extraction?.mobilityNeeds ?? "");
+        setDraft({
+            ...EMPTY_DRAFT,
+            entryPoint: detail.extraction?.entryPoint ?? "",
+            mobilityNeeds: detail.extraction?.mobilityNeeds ?? "",
+        });
         setClarifications(detail.extraction?.clarifications ?? []);
         setCorrections({});
         setWarnings([]);
@@ -222,7 +228,13 @@ export function TransitGuide() {
                 if (!line.trim()) {
                     continue;
                 }
-                const event = JSON.parse(line) as TransitStreamEvent;
+                // A single malformed frame must not abandon a run whose brief the server already stored.
+                let event: TransitStreamEvent;
+                try {
+                    event = JSON.parse(line) as TransitStreamEvent;
+                } catch {
+                    continue;
+                }
                 switch (event.type) {
                     case "stage": {
                         setStage(event.stage);
@@ -250,10 +262,9 @@ export function TransitGuide() {
                     }
                     case "brief-ready": {
                         setBrief(event.brief);
-                        setExtraction((current) => current);
                         setClarifications([]);
                         setCorrections({});
-                        setMessage("");
+                        patchDraft({ message: "" });
                         break;
                     }
                     case "error": {
@@ -301,10 +312,13 @@ export function TransitGuide() {
         setStageMessage(previews.length > 0 ? "Preparing your screenshots" : "Preparing the saved itinerary");
         const formData = new FormData();
         formData.set("clientTurnId", makeClientTurnId());
-        if (message.trim()) formData.set("message", message.trim());
-        if (entryPoint.trim()) formData.set("entryPoint", entryPoint.trim());
-        if (travelDate) formData.set("travelDate", travelDate);
-        if (mobilityNeeds.trim()) formData.set("mobilityNeeds", mobilityNeeds.trim());
+        if (draft.message.trim()) formData.set("message", draft.message.trim());
+        if (draft.entryPoint.trim()) formData.set("entryPoint", draft.entryPoint.trim());
+        if (draft.travelDate) formData.set("travelDate", draft.travelDate);
+        if (draft.mobilityNeeds.trim()) formData.set("mobilityNeeds", draft.mobilityNeeds.trim());
+        for (const [key, value] of Object.entries(departureWindowFields(draft.departure))) {
+            formData.set(key, value);
+        }
         if (correctionMode) formData.set("correctionsJson", JSON.stringify(corrections));
         for (const preview of previews) {
             formData.append("images", preview.file, preview.file.name);
@@ -334,10 +348,7 @@ export function TransitGuide() {
             setExtraction(null);
             setClarifications([]);
             setCorrections({});
-            setEntryPoint("");
-            setTravelDate("");
-            setMobilityNeeds("");
-            setMessage("");
+            setDraft(EMPTY_DRAFT);
             setWarnings([]);
             setError(null);
             setShowHistory(false);
@@ -379,9 +390,13 @@ export function TransitGuide() {
         }
     }
 
+    const activeStageIndex = stage ? STAGE_ORDER.indexOf(stage) : -1;
+    const showSetup = !brief;
+    const journeyTitle = briefRouteLabel(brief) ?? "Your journey";
+
     return (
         <div
-            className="relative min-h-full overflow-hidden bg-[radial-gradient(circle_at_82%_4%,rgba(251,191,36,.10),transparent_28%),radial-gradient(circle_at_12%_26%,rgba(16,185,129,.08),transparent_30%)]"
+            className="relative min-h-full bg-[radial-gradient(circle_at_88%_0%,rgba(251,191,36,.09),transparent_32%),radial-gradient(circle_at_0%_22%,rgba(16,185,129,.07),transparent_34%)] [--font-mono:var(--font-geist-mono)]"
             onPaste={(event) => {
                 const images = transitImagesFromClipboard(event.clipboardData);
                 if (images.length > 0) {
@@ -390,41 +405,49 @@ export function TransitGuide() {
                 }
             }}
         >
-            <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,.9)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.9)_1px,transparent_1px)] [background-size:44px_44px] opacity-[0.035]" />
-            <div className="plearn-page relative max-w-[1080px]">
-                <header className="flex flex-col gap-5 border-b border-white/8 pb-6 md:flex-row md:items-end md:justify-between">
-                    <div className="max-w-2xl">
-                        <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] text-emerald-300/80 uppercase">
-                            <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" /> 日本 · Rail intelligence
+            <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,.9)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.9)_1px,transparent_1px)] [background-size:44px_44px] opacity-[0.03]" />
+
+            <div className="relative mx-auto w-full max-w-[44rem] px-4 pt-5 pb-16 sm:px-6 md:pt-9">
+                <header className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] whitespace-nowrap text-emerald-300/80 uppercase">
+                            <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-300" /> 日本 · Rail
+                            <span className="hidden sm:inline">intelligence</span>
                         </p>
-                        <h1 className="mt-3 text-[clamp(2.7rem,7vw,5.3rem)] leading-[0.88] font-[var(--font-display)] tracking-[-0.055em] text-white">
-                            Know your train.
-                            <span className="block text-amber-200">Find your track.</span>
-                        </h1>
-                        <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-400 md:text-base">
-                            Drop in SmartEX, Google Maps, or JR screenshots. Luna reads the reservation, checks official sources, and turns
-                            station maps into signs you can follow.
-                        </p>
+                        {showSetup ? (
+                            <h1 className="mt-2.5 text-[clamp(1.65rem,8.5vw,2.9rem)] leading-[0.92] font-[var(--font-display)] tracking-[-0.04em] text-white">
+                                Know your train.
+                                <span className="block text-amber-200">Find your track.</span>
+                            </h1>
+                        ) : (
+                            <h1 className="mt-1.5 truncate text-xl leading-tight font-[var(--font-display)] tracking-[-0.03em] text-white">
+                                {journeyTitle}
+                            </h1>
+                        )}
                     </div>
 
-                    <div className="relative flex gap-2">
-                        <Button variant="outline" onClick={() => setShowHistory((value) => !value)} aria-expanded={showHistory}>
-                            <ClockCounterClockwise /> Journeys{" "}
-                            <CaretDown className={cn("transition-transform", showHistory && "rotate-180")} />
-                        </Button>
-                        <Button variant="outline" onClick={() => void startNewJourney()} disabled={isRunning}>
-                            <Plus /> New
-                        </Button>
-                        {showHistory ? (
-                            <div className="absolute top-11 right-0 z-30 w-[min(88vw,340px)] rounded-xl border border-white/10 bg-neutral-950/98 p-2 shadow-2xl backdrop-blur-xl">
+                    <div className="flex shrink-0 gap-1.5">
+                        <Popover open={showHistory} onOpenChange={setShowHistory}>
+                            <PopoverTrigger
+                                render={<Button variant="outline" size="sm" aria-label="Saved journeys" />}
+                                disabled={threads.length === 0}
+                            >
+                                <ClockCounterClockwise />
+                                <span className="hidden sm:inline">Journeys</span>
+                                <CaretDown className={cn("transition-transform", showHistory && "rotate-180")} />
+                            </PopoverTrigger>
+                            <PopoverPopup align="end" className="w-[min(88vw,20rem)] p-1">
                                 {threads.map((thread) => (
                                     <div key={thread.id} className="group flex items-center gap-1 rounded-lg hover:bg-white/5">
                                         <button
                                             type="button"
                                             onClick={() => void selectThread(thread.id)}
-                                            className="min-w-0 flex-1 px-3 py-2.5 text-left"
+                                            className={cn(
+                                                "min-w-0 flex-1 rounded-lg px-2.5 py-2 text-left",
+                                                thread.id === activeThreadId && "bg-white/4",
+                                            )}
                                         >
-                                            <p className="truncate text-sm text-neutral-200">{thread.title}</p>
+                                            <p className="truncate text-[13px] text-neutral-200">{thread.title}</p>
                                             <p className="mt-0.5 font-mono text-[10px] text-neutral-600">
                                                 {formatThreadDate(thread.lastMessageAt)}
                                             </p>
@@ -433,313 +456,166 @@ export function TransitGuide() {
                                             type="button"
                                             onClick={() => void deleteThread(thread.id)}
                                             aria-label={`Delete ${thread.title}`}
-                                            className="rounded p-2 text-neutral-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-300 focus:opacity-100"
+                                            className="rounded p-2 text-neutral-600 transition-opacity hover:text-red-300 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                                         >
                                             <Trash className="size-4" />
                                         </button>
                                     </div>
                                 ))}
-                            </div>
-                        ) : null}
+                            </PopoverPopup>
+                        </Popover>
+                        <Button variant="outline" size="sm" onClick={() => void startNewJourney()} disabled={isRunning}>
+                            <Plus />
+                            <span className="hidden sm:inline">New</span>
+                        </Button>
                     </div>
                 </header>
 
-                <div className="mt-6 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
-                    <aside className="space-y-4 lg:sticky lg:top-6">
-                        <section className="overflow-hidden rounded-[1.25rem] border border-white/9 bg-neutral-950/70 shadow-[0_20px_70px_rgba(0,0,0,.25)] backdrop-blur-sm">
-                            <div className="border-b border-white/8 px-5 py-4">
-                                <p className="flex items-center gap-2 text-sm font-medium text-neutral-100">
-                                    <Camera className="size-4 text-amber-200" /> 1 · Add your evidence
-                                </p>
-                                <p className="mt-1 text-xs leading-5 text-neutral-500">Up to 3 images · PNG, JPEG, WebP · 20 MB total</p>
-                            </div>
+                {showSetup ? (
+                    <p className="mt-3 max-w-lg text-[13px] leading-6 text-neutral-400">
+                        Drop in a SmartEX, Google Maps, or JR screenshot. Luna reads the reservation, checks official sources, and turns
+                        station maps into signs you can follow.
+                    </p>
+                ) : null}
 
-                            <div className="p-4">
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/webp"
-                                    multiple
-                                    className="sr-only"
-                                    onChange={(event) => event.target.files && addFiles(event.target.files)}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDragEnter={(event) => {
-                                        event.preventDefault();
-                                        setIsDragging(true);
-                                    }}
-                                    onDragOver={(event) => event.preventDefault()}
-                                    onDragLeave={() => setIsDragging(false)}
-                                    onDrop={(event) => {
-                                        event.preventDefault();
-                                        setIsDragging(false);
-                                        addFiles(event.dataTransfer.files);
-                                    }}
-                                    className={cn(
-                                        "group flex min-h-32 w-full flex-col items-center justify-center rounded-xl border border-dashed p-4 text-center transition-colors",
-                                        isDragging
-                                            ? "border-amber-300/70 bg-amber-300/8"
-                                            : "border-white/15 bg-white/[0.025] hover:border-amber-300/35 hover:bg-amber-300/[0.035]",
-                                    )}
-                                >
-                                    <span className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-black/20 text-neutral-300 transition-colors group-hover:text-amber-200">
-                                        <UploadSimple className="size-5" />
-                                    </span>
-                                    <span className="mt-3 text-sm text-neutral-200">Snap, choose, or paste screenshots</span>
-                                    <span className="mt-1 text-xs text-neutral-600">SmartEX · Google Maps · JR timetable</span>
-                                    <span className="mt-2 rounded border border-white/8 bg-black/20 px-2 py-1 font-mono text-[9px] tracking-[0.08em] text-neutral-500 uppercase">
-                                        ⌘V / Ctrl+V anywhere
-                                    </span>
-                                </button>
+                <div className="mt-5 space-y-4">
+                    {error ? (
+                        <div
+                            role="alert"
+                            className="flex items-start gap-2.5 rounded-xl border border-red-400/25 bg-red-400/8 px-3.5 py-3 text-[13px] text-red-100"
+                        >
+                            <Warning className="mt-0.5 size-4 shrink-0" weight="fill" />
+                            <span className="flex-1 leading-5">{error}</span>
+                            <button type="button" onClick={() => setError(null)} aria-label="Dismiss error">
+                                <X className="size-4" />
+                            </button>
+                        </div>
+                    ) : null}
 
-                                {previews.length > 0 ? (
-                                    <div className="mt-3 grid grid-cols-3 gap-2">
-                                        {previews.map((preview, index) => (
-                                            <div
-                                                key={preview.url}
-                                                className="group relative aspect-[3/4] overflow-hidden rounded-lg border border-white/10 bg-black"
-                                            >
-                                                {/* User-selected object URLs never leave the browser except in the explicit form submission. */}
-                                                <img
-                                                    src={preview.url}
-                                                    alt={`Screenshot ${index + 1}`}
-                                                    className="h-full w-full object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removePreview(index)}
-                                                    aria-label={`Remove screenshot ${index + 1}`}
-                                                    className="absolute top-1 right-1 flex size-7 items-center justify-center rounded-full bg-black/80 text-white"
-                                                >
-                                                    <X className="size-3.5" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : extraction ? (
-                                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-3 py-2 text-xs text-emerald-200">
-                                        <Check className="size-4" weight="bold" /> Screenshot processed and discarded
-                                    </div>
+                    {isLoading ? (
+                        <div className="flex min-h-24 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.02]">
+                            <p className="animate-pulse font-mono text-[11px] tracking-[0.14em] text-neutral-500 uppercase">
+                                Loading rail desk…
+                            </p>
+                        </div>
+                    ) : (
+                        <TransitComposer
+                            mode={brief ? "followup" : "setup"}
+                            draft={draft}
+                            onDraftChange={patchDraft}
+                            previews={previews}
+                            onAddFiles={addFiles}
+                            onRemovePreview={removePreview}
+                            hasStoredEvidence={Boolean(extraction)}
+                            today={tokyoNow.date}
+                            nowClock={tokyoNow.clock}
+                            status={isRunning ? "running" : "ready"}
+                            onSubmit={() => void submit(false)}
+                        />
+                    )}
+
+                    {stage ? (
+                        <section className="rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-4 py-3.5" aria-live="polite">
+                            <div className="flex items-center gap-2.5">
+                                <Sparkle className="size-4 shrink-0 animate-pulse text-amber-200" weight="fill" />
+                                <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-amber-100">{stageMessage}</p>
+                                {sourceCount > 0 ? (
+                                    <span className="shrink-0 font-mono text-[10px] text-neutral-500">{sourceCount} sources</span>
                                 ) : null}
                             </div>
-                        </section>
-
-                        <section className="rounded-[1.25rem] border border-white/9 bg-neutral-950/70 p-5 backdrop-blur-sm">
-                            <p className="flex items-center gap-2 text-sm font-medium text-neutral-100">
-                                <MapPin className="size-4 text-emerald-200" /> 2 · Where are you entering?
-                            </p>
-                            <label className="mt-4 block text-[11px] text-neutral-500" htmlFor="transit-entry-point">
-                                Street, exit, gate, hotel, or landmark
-                            </label>
-                            <Input
-                                id="transit-entry-point"
-                                value={entryPoint}
-                                onChange={(event) => setEntryPoint(event.target.value)}
-                                placeholder="e.g. Yaesu North Exit"
-                                className="mt-1.5"
-                            />
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                {["Yaesu North Exit", "Marunouchi Street", "Shinkansen transfer gate"].map((suggestion) => (
-                                    <button
-                                        key={suggestion}
-                                        type="button"
-                                        onClick={() => setEntryPoint(suggestion)}
-                                        className="rounded-full border border-white/8 px-2.5 py-1 text-[10px] text-neutral-500 transition-colors hover:border-emerald-300/25 hover:text-emerald-200"
-                                    >
-                                        {suggestion}
-                                    </button>
+                            <div className="mt-3 flex gap-1">
+                                {STAGE_ORDER.map((item, index) => (
+                                    <div
+                                        key={item}
+                                        className={cn(
+                                            "h-1 flex-1 rounded-full transition-colors",
+                                            index <= activeStageIndex ? "bg-amber-300" : "bg-white/8",
+                                        )}
+                                    />
                                 ))}
                             </div>
+                            <p className="mt-2 font-mono text-[10px] tracking-[0.12em] text-neutral-500 uppercase">
+                                Step {activeStageIndex + 1} of {STAGE_ORDER.length} · {stage ? STAGE_LABELS[stage] : ""}
+                            </p>
+                        </section>
+                    ) : null}
 
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                <label className="text-[11px] text-neutral-500">
-                                    Travel date
-                                    <Input
-                                        type="date"
-                                        value={travelDate}
-                                        onChange={(event) => setTravelDate(event.target.value)}
-                                        className="mt-1.5"
-                                    />
-                                </label>
-                                <label className="text-[11px] text-neutral-500">
-                                    Access needs
-                                    <Input
-                                        value={mobilityNeeds}
-                                        onChange={(event) => setMobilityNeeds(event.target.value)}
-                                        placeholder="Luggage, lifts…"
-                                        className="mt-1.5"
-                                    />
-                                </label>
+                    {clarifications.length > 0 && !isRunning ? (
+                        <section className="rounded-2xl border border-sky-300/20 bg-sky-300/[0.05] p-4 sm:p-5">
+                            <p className="text-sm font-medium text-sky-100">Confirm what Luna could not safely infer</p>
+                            <p className="mt-1 text-xs leading-5 text-neutral-500">
+                                Critical dates, stations, and train numbers are never guessed.
+                            </p>
+                            <div className="mt-4 space-y-3">
+                                {clarifications.map((field) => (
+                                    <label key={field.field} className="block text-xs text-neutral-400">
+                                        {field.question}
+                                        <Input
+                                            value={corrections[field.field] ?? field.currentValue ?? ""}
+                                            onChange={(event) =>
+                                                setCorrections((current) => ({ ...current, [field.field]: event.target.value }))
+                                            }
+                                            className="mt-1.5"
+                                            list={`suggestions-${field.field}`}
+                                        />
+                                        <datalist id={`suggestions-${field.field}`}>
+                                            {field.suggestions.map((suggestion) => (
+                                                <option key={suggestion} value={suggestion} />
+                                            ))}
+                                        </datalist>
+                                    </label>
+                                ))}
                             </div>
-
-                            <label className="mt-4 block text-[11px] text-neutral-500" htmlFor="transit-question">
-                                {brief ? "Ask a follow-up" : "Anything else?"}
-                            </label>
-                            <Textarea
-                                id="transit-question"
-                                value={message}
-                                onChange={(event) => setMessage(event.target.value)}
-                                placeholder={
-                                    brief
-                                        ? "Which signs should I follow after the transfer gate?"
-                                        : "I have large luggage and need the elevator route."
-                                }
-                                className="mt-1.5 min-h-20 resize-none"
-                            />
-
                             <Button
-                                size="xl"
-                                className="mt-4 w-full border-amber-300/40 bg-amber-300/90 text-neutral-950 hover:bg-amber-200"
-                                onClick={() => void submit(false)}
-                                disabled={isRunning || isLoading}
+                                size="lg"
+                                className="mt-4 w-full sm:w-auto"
+                                onClick={() => void submit(true)}
+                                disabled={clarifications.some((field) => !(corrections[field.field] ?? field.currentValue)?.trim())}
                             >
-                                {isRunning ? (
-                                    <Sparkle className="animate-pulse" />
-                                ) : brief && previews.length === 0 ? (
-                                    <Train />
-                                ) : (
-                                    <FileImage />
-                                )}
-                                {isRunning
-                                    ? "Checking Japan rail…"
-                                    : brief && previews.length === 0
-                                      ? "Ask about this journey"
-                                      : "Read & verify journey"}
+                                <Check /> Confirm & check sources
                             </Button>
                         </section>
+                    ) : null}
 
-                        <div className="flex items-start gap-2 px-1 text-[11px] leading-5 text-neutral-600">
-                            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-300/60" />
-                            <span>
-                                Images are sent transiently to OpenAI, stripped of metadata, and never stored by Plearn. Redacted trip facts
-                                and sources remain in journey history.
+                    {brief ? (
+                        <TransitBriefView brief={brief} />
+                    ) : !isLoading && !stage && clarifications.length === 0 ? (
+                        <section className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 px-6 py-10 text-center">
+                            <span className="flex size-12 items-center justify-center rounded-full border border-emerald-300/15 bg-emerald-300/5 text-emerald-200">
+                                <Train className="size-6" weight="duotone" />
                             </span>
-                        </div>
-                    </aside>
+                            <h2 className="mt-4 text-xl font-[var(--font-display)] text-white">Your platform brief appears here</h2>
+                            <p className="mt-2 max-w-sm text-[13px] leading-6 text-neutral-500">
+                                We separate what was reserved, what is scheduled, and what the operator is reporting now.
+                            </p>
+                        </section>
+                    ) : null}
 
-                    <main className="min-w-0 space-y-4">
-                        {isLoading ? (
-                            <div className="flex min-h-80 items-center justify-center rounded-[1.3rem] border border-white/8 bg-white/[0.02]">
-                                <p className="animate-pulse font-mono text-xs tracking-[0.12em] text-neutral-500 uppercase">
-                                    Loading rail desk…
-                                </p>
-                            </div>
-                        ) : null}
-
-                        {error ? (
-                            <div
-                                role="alert"
-                                className="flex items-start gap-3 rounded-xl border border-red-400/25 bg-red-400/7 px-4 py-3 text-sm text-red-100"
-                            >
-                                <Warning className="mt-0.5 size-4 shrink-0" weight="fill" />
-                                <span className="flex-1 leading-5">{error}</span>
-                                <button type="button" onClick={() => setError(null)} aria-label="Dismiss error">
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-                        ) : null}
-
-                        {stage ? (
-                            <section className="rounded-[1.2rem] border border-amber-300/15 bg-amber-300/[0.035] p-5" aria-live="polite">
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="flex items-center gap-2 text-sm font-medium text-amber-100">
-                                        <Sparkle className="size-4 animate-pulse" weight="fill" /> {stageMessage}
-                                    </p>
-                                    {sourceCount > 0 ? (
-                                        <span className="font-mono text-[10px] text-neutral-500">{sourceCount} sources</span>
-                                    ) : null}
-                                </div>
-                                <div className="mt-4 grid grid-cols-5 gap-1.5">
-                                    {STAGE_ORDER.map((item, index) => {
-                                        const activeIndex = STAGE_ORDER.indexOf(stage);
-                                        const reached = index <= activeIndex;
-
-                                        return (
-                                            <div key={item}>
-                                                <div className={cn("h-1 rounded-full", reached ? "bg-amber-300" : "bg-white/8")} />
-                                                <p
-                                                    className={cn(
-                                                        "mt-2 hidden text-[9px] leading-3 md:block",
-                                                        reached ? "text-amber-100" : "text-neutral-600",
-                                                    )}
-                                                >
-                                                    {STAGE_LABELS[item]}
-                                                </p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </section>
-                        ) : null}
-
-                        {clarifications.length > 0 && !isRunning ? (
-                            <section className="rounded-[1.2rem] border border-sky-300/20 bg-sky-300/[0.04] p-5">
-                                <p className="text-sm font-medium text-sky-100">Confirm what Luna could not safely infer</p>
-                                <p className="mt-1 text-xs leading-5 text-neutral-500">
-                                    Critical dates, stations, and train numbers are never guessed.
-                                </p>
-                                <div className="mt-4 space-y-4">
-                                    {clarifications.map((field) => (
-                                        <label key={field.field} className="block text-xs text-neutral-400">
-                                            {field.question}
-                                            <Input
-                                                value={corrections[field.field] ?? field.currentValue ?? ""}
-                                                onChange={(event) =>
-                                                    setCorrections((current) => ({ ...current, [field.field]: event.target.value }))
-                                                }
-                                                className="mt-1.5"
-                                                list={`suggestions-${field.field}`}
-                                            />
-                                            <datalist id={`suggestions-${field.field}`}>
-                                                {field.suggestions.map((suggestion) => (
-                                                    <option key={suggestion} value={suggestion} />
-                                                ))}
-                                            </datalist>
-                                        </label>
-                                    ))}
-                                </div>
-                                <Button
-                                    className="mt-4"
-                                    onClick={() => void submit(true)}
-                                    disabled={clarifications.some((field) => !(corrections[field.field] ?? field.currentValue)?.trim())}
-                                >
-                                    <Check /> Confirm & check official sources
-                                </Button>
-                            </section>
-                        ) : null}
-
-                        {warnings.length > 0 ? (
-                            <div className="space-y-2">
+                    {warnings.length > 0 ? (
+                        <section className="rounded-xl border border-amber-300/12 bg-amber-300/[0.03] px-3.5 py-3" aria-label="Caveats">
+                            <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-amber-200/70 uppercase">
+                                <Warning className="size-3.5" /> Caveats
+                            </p>
+                            <ul className="mt-2 space-y-1.5">
                                 {warnings.map((warning) => (
-                                    <p
-                                        key={warning}
-                                        className="flex items-start gap-2 rounded-lg border border-amber-300/15 bg-amber-300/[0.025] px-3 py-2 text-xs leading-5 text-neutral-400"
-                                    >
-                                        <Warning className="mt-0.5 size-3.5 shrink-0 text-amber-200" /> {warning}
-                                    </p>
+                                    <li key={warning} className="flex gap-2 text-xs leading-5 text-neutral-400">
+                                        <span aria-hidden className="text-amber-300/60">
+                                            ·
+                                        </span>
+                                        {warning}
+                                    </li>
                                 ))}
-                            </div>
-                        ) : null}
+                            </ul>
+                        </section>
+                    ) : null}
 
-                        {brief ? (
-                            <TransitBriefView brief={brief} />
-                        ) : !isLoading && !stage && clarifications.length === 0 ? (
-                            <section className="flex min-h-[430px] flex-col items-center justify-center rounded-[1.3rem] border border-dashed border-white/10 bg-black/10 px-7 text-center">
-                                <span className="flex size-16 items-center justify-center rounded-full border border-emerald-300/15 bg-emerald-300/5 text-emerald-200">
-                                    <Train className="size-8" weight="duotone" />
-                                </span>
-                                <h2 className="mt-5 text-3xl font-[var(--font-display)] text-white">
-                                    Your platform brief will appear here
-                                </h2>
-                                <p className="mt-3 max-w-md text-sm leading-6 text-neutral-500">
-                                    Start with the screenshot you already trust. We will separate what was reserved, what is scheduled, and
-                                    what the operator is reporting now.
-                                </p>
-                            </section>
-                        ) : null}
-                    </main>
+                    <p className="flex items-start gap-2 px-1 text-[11px] leading-5 text-neutral-600">
+                        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-300/50" />
+                        <span>
+                            Images are sent transiently to OpenAI, stripped of metadata, and never stored by Plearn. Redacted trip facts and
+                            sources remain in journey history.
+                        </span>
+                    </p>
                 </div>
             </div>
         </div>

@@ -5,6 +5,7 @@ import { TransitRepository, type TransitMessagePart } from "./repository";
 import { sanitizeUserText } from "./sanitize";
 import { createTransitNdjsonStream } from "./streaming";
 import type { NormalizedTransitImage } from "./uploads";
+import type { ResolvedDepartureWindow } from "@/lib/transit/departure";
 import type { SanitizedTransitExtraction, TransitBrief, TransitFailureCode, TransitWarningCode } from "@/lib/transit/types";
 import type { DatabaseInstance } from "@plearn/db/client";
 import "server-only";
@@ -27,6 +28,8 @@ export interface TransitTurnInput {
     readonly message: string | null;
     readonly entryPoint: string | null;
     readonly travelDate: string | null;
+    /** Explicit Asia/Tokyo departure window when the traveler is not taking the booked service. */
+    readonly departureWindow: ResolvedDepartureWindow | null;
     readonly mobilityNeeds: string | null;
     readonly city: string | null;
     readonly corrections: Readonly<Record<string, string>>;
@@ -106,11 +109,18 @@ function applyCorrections(
     };
 }
 
+function departureWindowSummary(window: ResolvedDepartureWindow) {
+    const bound = window.before ? `${window.after}–${window.before}` : `from ${window.after}`;
+
+    return `${window.date} ${bound} JST${window.relativeMinutes === null ? "" : ` (leaving in ${window.relativeMinutes} min)`}`;
+}
+
 function userMessageParts(input: TransitTurnInput): readonly TransitMessagePart[] {
     const summary = [
         input.message,
         input.entryPoint ? `Starting point: ${input.entryPoint}` : null,
         input.travelDate ? `Travel date: ${input.travelDate}` : null,
+        input.departureWindow ? `Departure window: ${departureWindowSummary(input.departureWindow)}` : null,
         input.mobilityNeeds ? `Mobility/luggage: ${input.mobilityNeeds}` : null,
         input.images.length > 0 ? `${input.images.length} transient screenshot${input.images.length === 1 ? "" : "s"} processed.` : null,
     ]
@@ -221,11 +231,6 @@ export class TransitService {
         if (await this.repository.getActiveRunForUser(input.userId)) {
             throw new TransitServiceError("Another rail check is already running.", "run_in_progress", 409);
         }
-        const recentRuns = await this.repository.countRecentRuns(input.userId, new Date(Date.now() - 60 * 60 * 1000));
-        if (recentRuns >= config.TRANSIT_ASSISTANT_MAX_RUNS_PER_HOUR) {
-            throw new TransitServiceError("The hourly rail-check limit has been reached. Try again later.", "rate_limited", 429);
-        }
-
         const previous = await this.repository.getThreadDetail(input.userId, input.threadId);
         if (input.images.length === 0 && !previous?.extraction) {
             throw new TransitServiceError("Attach a journey screenshot to begin.", "needs_image", 400);
@@ -263,6 +268,7 @@ export class TransitService {
                         images: input.images,
                         entryPoint: input.entryPoint,
                         travelDate: input.travelDate,
+                        departureWindow: input.departureWindow,
                         mobilityNeeds: input.mobilityNeeds,
                         message: input.message,
                         signal,
@@ -277,6 +283,15 @@ export class TransitService {
                 }
 
                 extraction = applyCorrections(extraction, input.corrections, input.entryPoint, input.travelDate);
+                if (input.departureWindow) {
+                    // The window settles which day the traveler is asking about, so a service-date question is
+                    // moot. It must not rewrite the reservation's own date or promote its confidence: the window
+                    // is an intent, not evidence, and it reaches the model through the research prompt instead.
+                    extraction = {
+                        ...extraction,
+                        clarifications: extraction.clarifications.filter((field) => field.field !== "serviceDate"),
+                    };
+                }
                 if (extraction.clarifications.length > 0) {
                     const parts: TransitMessagePart[] = [
                         { type: "text", text: "I need a few details before checking official rail information." },
@@ -306,6 +321,7 @@ export class TransitService {
                         mobilityNeeds: input.mobilityNeeds ?? extraction.mobilityNeeds,
                         city: input.city,
                         message: input.message,
+                        departureWindow: input.departureWindow,
                         previousBrief: previous?.brief ?? null,
                         signal,
                         onStage(stage) {
@@ -326,6 +342,13 @@ export class TransitService {
                         mapFetchAttempted: false,
                         mapFetchSucceeded: false,
                     };
+                    // Falling back is not the same as finding nothing: say so rather than shipping a
+                    // screenshot-only brief that merely looks under-sourced.
+                    send({
+                        type: "warning",
+                        code: "not_currently_verified",
+                        message: "Official source research failed, so this brief repeats your screenshot only. Nothing here is verified.",
+                    });
                 }
                 send({ type: "stage", stage: "building_directions", message: "Building your station-ready boarding brief" });
                 for (const source of researched.sources) {

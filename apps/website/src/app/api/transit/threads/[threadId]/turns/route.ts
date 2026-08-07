@@ -1,6 +1,8 @@
+import { DATE_PATTERN } from "@/lib/calendar";
 import { getAuth, getTransitService } from "@/lib/server/clients";
 import { sanitizeTransitTurnFields, TransitServiceError } from "@/lib/server/transit/service";
 import { normalizeTransitImages, TransitUploadError } from "@/lib/server/transit/uploads";
+import { CLOCK_PATTERN, MAX_DEPARTURE_OFFSET_MINUTES, resolveDepartureWindow } from "@/lib/transit/departure";
 import { transitCorrectionsSchema } from "@/lib/transit/schemas";
 import { z } from "zod";
 
@@ -9,10 +11,10 @@ export const maxDuration = 180;
 
 const fieldsSchema = z.object({
     clientTurnId: z.string().trim().min(1).max(120),
-    travelDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/u)
-        .nullable(),
+    travelDate: z.string().regex(DATE_PATTERN).nullable(),
+    departOffsetMinutes: z.coerce.number().int().min(0).max(MAX_DEPARTURE_OFFSET_MINUTES).nullable(),
+    departAfter: z.string().regex(CLOCK_PATTERN).nullable(),
+    departBefore: z.string().regex(CLOCK_PATTERN).nullable(),
 });
 
 interface RouteContext {
@@ -36,6 +38,9 @@ export async function POST(request: Request, context: RouteContext) {
         const parsedFields = fieldsSchema.safeParse({
             clientTurnId: field(formData, "clientTurnId"),
             travelDate: field(formData, "travelDate"),
+            departOffsetMinutes: field(formData, "departOffsetMinutes"),
+            departAfter: field(formData, "departAfter"),
+            departBefore: field(formData, "departBefore"),
         });
         if (!parsedFields.success) {
             return Response.json({ code: "invalid_upload", message: "The transit request fields are invalid." }, { status: 400 });
@@ -56,11 +61,19 @@ export async function POST(request: Request, context: RouteContext) {
             city: field(formData, "city"),
         });
 
+        const departureWindow = resolveDepartureWindow({
+            travelDate: parsedFields.data.travelDate,
+            offsetMinutes: parsedFields.data.departOffsetMinutes,
+            after: parsedFields.data.departAfter,
+            before: parsedFields.data.departBefore,
+        });
+
         return await getTransitService().runTurn({
             userId: session.user.id,
             threadId: params.threadId,
             clientTurnId: parsedFields.data.clientTurnId,
             travelDate: parsedFields.data.travelDate,
+            departureWindow,
             corrections: parsedCorrections.data,
             images,
             requestSignal: request.signal,
